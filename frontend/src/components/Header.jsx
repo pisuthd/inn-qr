@@ -1,17 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-
-const countries = [
-  { id: 1, flag: '🇹🇭', name: 'Thailand', system: 'PromptPay' },
-  { id: 2, flag: '🇻🇳', name: 'Vietnam', system: 'VietQR' },
-  { id: 3, flag: '🇲🇾', name: 'Malaysia', system: 'DuitNow QR' },
-  { id: 4, flag: '🇵🇭', name: 'Philippines', system: 'QR Ph' },
-  { id: 5, flag: '🇮🇩', name: 'Indonesia', system: 'QRIS' },
-  { id: 6, flag: '🇸🇬', name: 'Singapore', system: 'PayNow' },
-];
+import { useSettings } from '../contexts/SettingsContext.jsx';
 
 function Header({ activeTab, onTabChange }) {
-  const [selectedCountry, setSelectedCountry] = useState(countries[0]);
+  const { selectedCountry, setCountry, countries } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -51,7 +43,7 @@ function Header({ activeTab, onTabChange }) {
                 <button
                   key={country.id}
                   onClick={() => {
-                    setSelectedCountry(country);
+                    setCountry(country);
                     setIsOpen(false);
                   }}
                   className={`dropdown-item ${selectedCountry.id === country.id ? 'active' : ''}`}

@@ -1,19 +1,26 @@
 import { useInterwovenKit } from "@initia/interwovenkit-react";
-import { 
-  Coins, 
-  ArrowDownToLine, 
-  Send, 
-  Sparkles, 
-  Wallet,
+import { useSettings } from "../contexts/SettingsContext.jsx";
+import {
+  Coins,
+  ArrowDownToLine,
+  Send,
+  Sparkles,
   QrCode,
   HelpCircle,
   CircleHelp,
   FileText,
-  Headphones
+  Headphones,
+  ChevronRight
 } from 'lucide-react';
 
 function Home({ onNavigate }) {
-  const { initiaAddress, openConnect } = useInterwovenKit();
+  const { initiaAddress, openConnect, openWallet } = useInterwovenKit();
+  const { selectedCountry } = useSettings();
+
+  const shortenAddress = (addr) => {
+    if (!addr) return "";
+    return `${addr.slice(0, 8)}...${addr.slice(-4)}`;
+  };
 
   const menuItems = [
     { id: 'scan', label: 'Scan', Icon: QrCode, gradient: 'gradient-swap' },
@@ -32,9 +39,9 @@ function Home({ onNavigate }) {
       <div className="hero-card">
         <div className="hero-image">
           <div className="hero-glow" />
-          <div className="hero-text" style={{maxWidth: "400px"}}>
-            <h2 style={{ color: '#ffffff' }}>Spend your yield with THB</h2>
-            <p style={{ color: '#b8f5e3' }}>Use any Interwoven staked asset on Initia. Pay anywhere via QR payment.</p>
+          <div className="hero-text" style={{ maxWidth: "400px" }}>
+            <h2 style={{ color: '#ffffff' }}>Spend your yield with {selectedCountry.currency}</h2>
+            <p style={{ color: '#b8f5e3' }}>Use staked assets across interwoven rollups. Scan any QR code and pay in local currency. AI helps match with {selectedCountry.operators} local partners, settles in seconds.</p>
           </div>
         </div>
         <div className="hero-content">
@@ -47,13 +54,13 @@ function Home({ onNavigate }) {
             </span>
           </div>
           {!initiaAddress ? (
-            <button className="connect-wallet-btn" onClick={openConnect}>
-              <Wallet size={18} />
-              Connect
+            <button onClick={openConnect} className="btn btn-primary">
+              Connect Wallet
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={() => onNavigate('inventory')}>
-              Get Started
+            <button onClick={openWallet} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {shortenAddress(initiaAddress)}
+              <ChevronRight size={16} />
             </button>
           )}
         </div>
@@ -81,17 +88,17 @@ function Home({ onNavigate }) {
       {/* Feature Highlights */}
       <div className="card">
         <h3 className="card-title">Why InnuQR?</h3>
-        <ul style={{ 
-          listStyle: 'none', 
-          padding: 0, 
+        <ul style={{
+          listStyle: 'none',
+          padding: 0,
           margin: 0,
           display: 'flex',
           flexDirection: 'column',
           gap: '0.75rem'
         }}>
-          <li style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <li style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem',
             color: '#b8f5e3',
             fontSize: '0.875rem'
@@ -99,9 +106,9 @@ function Home({ onNavigate }) {
             <span style={{ color: '#00e5c4' }}>⚡</span>
             <span>Never sell your crypto - spend only the yield it generates</span>
           </li>
-          <li style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <li style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem',
             color: '#b8f5e3',
             fontSize: '0.875rem'
@@ -109,9 +116,9 @@ function Home({ onNavigate }) {
             <span style={{ color: '#a855f7' }}>📱</span>
             <span>Scan any QR code and pay in local currency worldwide</span>
           </li>
-          <li style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <li style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem',
             color: '#b8f5e3',
             fontSize: '0.875rem'
@@ -129,13 +136,13 @@ function Home({ onNavigate }) {
           Connect your wallet to start earning yield and spending via QR.
         </p>
         {!initiaAddress ? (
-          <button className="connect-wallet-btn" onClick={openConnect}>
-            <Wallet size={18} />
+          <button onClick={openConnect} className="btn btn-primary">
             Connect Wallet
           </button>
         ) : (
-          <button className="btn btn-primary" onClick={() => onNavigate('inventory')}>
-            Get Started
+          <button onClick={openWallet} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {shortenAddress(initiaAddress)}
+            <ChevronRight size={16} />
           </button>
         )}
       </div>
