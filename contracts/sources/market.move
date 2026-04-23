@@ -1,4 +1,4 @@
-/// @title WeaveLink Market — Isolated Lending Pool
+/// @title WeaveLink Market -- Isolated Lending Pool
 /// @notice A Morpho Blue-inspired isolated lending market where each market pairs a
 ///         single loan token with a single collateral token 
 module weavelink::market {
@@ -50,7 +50,7 @@ module weavelink::market {
     /// An isolated lending market pairing one loan token with one collateral token.
     /// Each market is uniquely identified by an auto-incremented `market_id`.
     struct Market has key, store {
-        market_id: u64,           /// Auto-incremented unique identifier (1, 2, 3 …)
+        market_id: u64,           /// Auto-incremented unique identifier (1, 2, 3 ...)
         loan_token: u8,           /// Token ID of the asset that can be supplied & borrowed
         collateral_token: u8,     /// Token ID of the asset accepted as collateral
 
@@ -58,14 +58,14 @@ module weavelink::market {
         /// A position is unhealthy when (borrowed_value / collateral_value) > LLTV.
         lltv: u64,
 
-        // ── Interest-rate model parameters (all annualised, scaled by 1e6) ──
+        // -- Interest-rate model parameters (all annualised, scaled by 1e6) --
 
         base_rate: u64,           /// Borrow rate at 0 % utilization
         slope: u64,               /// Rate slope between 0 % and `kink` utilization
         kink: u64,                /// Utilization % at which the jump rate begins
         jump_rate: u64,           /// Additional rate slope above `kink`
 
-        // ── Aggregate pool state ──
+        // -- Aggregate pool state --
 
         total_supply: u64,        /// Total loan tokens supplied by all users
         total_borrow: u64,        /// Total loan tokens currently borrowed
@@ -80,7 +80,7 @@ module weavelink::market {
         collateral: u64           /// Collateral tokens the user has deposited
     }
 
-    /// Stores per-user authorization maps: delegator → (delegate → is_authorized).
+    /// Stores per-user authorization maps: delegator -> (delegate -> is_authorized).
     struct AuthorizationStore has key {
         authorizations: Table<address, Table<address, bool>>,
     }
@@ -88,8 +88,8 @@ module weavelink::market {
     /// Global singleton that owns all markets, positions, and the owner address.
     struct MarketStore has key {
         next_market_id: u64,                                    /// Next market_id to assign
-        markets: Table<u64, Market>,                            /// market_id → Market
-        positions: Table<address, Table<u64, Position>>,        /// user → (market_id → Position)
+        markets: Table<u64, Market>,                            /// market_id -> Market
+        positions: Table<address, Table<u64, Position>>,        /// user -> (market_id -> Position)
         owner: address                                          /// Address permitted to create markets
     }
 
@@ -186,9 +186,9 @@ module weavelink::market {
     /// piecewise-linear ("jump") interest-rate model.
     ///
     /// Returns a rate scaled by 1e6:
-    ///   - 0 % utilization → `base_rate`
-    ///   - 0 %–`kink` %   → linear interpolation from `base_rate` to `base_rate + slope`
-    ///   - > `kink` %      → `base_rate + slope + jump_rate * (util - kink) / (100 - kink)`
+    ///   - 0% utilization -> base_rate
+    ///   - 0%-kink%       -> linear interpolation from base_rate to base_rate + slope
+    ///   - > kink%         -> base_rate + slope + jump_rate * (util - kink) / (100 - kink)
     fun calculate_borrow_rate(market: &Market): u64 {
         if (market.total_supply == 0) {
             return market.base_rate
