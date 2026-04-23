@@ -1,8 +1,9 @@
-import { Home, Package, Users, User } from 'lucide-react';
+import { Home, Package, Users, User, Wallet } from 'lucide-react';
 
 function BottomNav({ activeTab, onTabChange }) {
   const tabs = [
     { id: 'home', label: 'HOME', Icon: Home },
+    { id: 'wallet', label: 'WALLET', Icon: Wallet },
     { id: 'inventory', label: 'PAY', Icon: Package },
     { id: 'leaderboard', label: 'PARTNERS', Icon: Users },
     { id: 'profile', label: 'PROFILE', Icon: User },

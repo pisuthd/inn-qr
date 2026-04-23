@@ -5,14 +5,9 @@ import Header from "./components/Header.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import Home from "./pages/Home.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
-import { Wallet, Users, Globe, Trophy, ChevronRight } from 'lucide-react';
+import Wallet from "./pages/Wallet.jsx";
+import { Wallet as WalletIcon, Users, Globe, Trophy, ChevronRight } from 'lucide-react';
 
-const tabs = [
-    { id: 'home', label: 'Home' },
-    { id: 'inventory', label: 'Inventory' },
-    { id: 'leaderboard', label: 'Leaderboard' },
-    { id: 'profile', label: 'Profile' },
-  ];
 
 function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -30,6 +25,8 @@ function App() {
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
+      case 'wallet':
+        return <Wallet />;
       case 'inventory':
         return <Dashboard />;
       case 'leaderboard':

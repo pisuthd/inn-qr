@@ -1,0 +1,11 @@
+[package]
+name = "weavelink"
+version = "0.1.0"
+
+[dependencies]
+InitiaStdlib = { local = "../blockforge/deps/movevm/precompile/modules/initia_stdlib" }
+MoveStdlib = { local = "../blockforge/deps/movevm/precompile/modules/move_stdlib" }
+
+[addresses]
+weavelink = "_"
+std = "0x1"

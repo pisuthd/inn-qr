@@ -26,8 +26,8 @@ const wagmiConfig = createConfig({
 });
 
 const customChain = {
-  chain_id: "innermost-1",
-  chain_name: "blockforge",
+  chain_id: "weavelink-1",
+  chain_name: "weavelink",
   pretty_name: "BlockForge",
   network_type: "testnet",
   bech32_prefix: "init",
@@ -44,7 +44,7 @@ const customChain = {
   fees: {
     fee_tokens: [
       {
-        denom: "INN",
+        denom: "WLINK",
         fixed_min_gas_price: 0,
         low_gas_price: 0,
         average_gas_price: 0,
@@ -53,7 +53,7 @@ const customChain = {
     ],
   },
   staking: {
-    staking_tokens: [{ denom: "INN" }],
+    staking_tokens: [{ denom: "WLINK" }],
   },
   metadata: {
     is_l1: false,
@@ -63,9 +63,9 @@ const customChain = {
   },
   native_assets: [
     {
-      denom: "INN",
-      name: "Innermost",
-      symbol: "INN",
+      denom: "WLINK",
+      name: "Weavelink",
+      symbol: "WLINK",
       decimals: 18,
     },
   ],
