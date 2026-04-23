@@ -4,14 +4,13 @@
 module weavelink::mock_tokens {
 
     use std::error;
-    use std::signer;
     use std::option;
     use std::table::{Self, Table};
     use initia_std::event;
 
     // === Constants ===
 
-    /// Token IDs
+    // Token IDs
     const USDC: u8 = 0;
     const S_INIT: u8 = 1;
     const S_LP: u8 = 2;
@@ -19,21 +18,21 @@ module weavelink::mock_tokens {
     const CABAL_DNIUSD: u8 = 4;
     const NUM_TOKENS: u8 = 5;
 
-    /// Error codes
+    // Error codes
     const EINSUFFICIENT_BALANCE: u64 = 1;
     const ETOKEN_NOT_FOUND: u64 = 2;
     const EREGISTRY_NOT_INITIALIZED: u64 = 3;
 
     // === Data Structures ===
 
-    /// Global registry holding all user balances.
-    /// Maps address -> Table<token_id, balance>
+    // Global registry holding all user balances.
+    // Maps address -> Table<token_id, balance>
     struct Registry has key {
         balances: Table<address, Table<u8, u64>>,
         initialized: bool
     }
 
-    /// Event emitted when tokens are minted
+    // Event emitted when tokens are minted
     #[event]
     struct MintEvent has drop, store {
         recipient: address,
@@ -41,7 +40,7 @@ module weavelink::mock_tokens {
         amount: u64
     }
 
-    /// Event emitted when tokens are burned
+    // Event emitted when tokens are burned
     #[event]
     struct BurnEvent has drop, store {
         from: address,
@@ -49,7 +48,7 @@ module weavelink::mock_tokens {
         amount: u64
     }
 
-    /// Event emitted when tokens are transferred
+    // Event emitted when tokens are transferred
     #[event]
     struct TransferEvent has drop, store {
         from: address,
@@ -70,31 +69,9 @@ module weavelink::mock_tokens {
         assert!(token_id < NUM_TOKENS, error::invalid_argument(ETOKEN_NOT_FOUND));
     }
 
-    // === Helper Functions ===
+    // === Constructor ===
 
-    /// Initialize or get user's balance entry
-    fun get_or_create_user_balances(
-        registry: &mut Registry,
-        user: address
-    ): &mut Table<u8, u64> {
-        if (!table::contains(&registry.balances, user)) {
-            table::add(&mut registry.balances, user, table::new<u8, u64>());
-        };
-        table::borrow_mut(&mut registry.balances, user)
-    }
-
-    /// Get balance, returns 0 if not found
-    fun get_balance(balances: &Table<u8, u64>, token_id: u8): u64 {
-        if (table::contains(balances, token_id)) {
-            *table::borrow(balances, token_id)
-        } else {
-            0
-        }
-    }
-
-    // === Entry Functions ===
-
-    /// Initialize the registry. Called automatically on module publish.
+    // Initialize the registry
     fun init_module(sender: &signer) {
         // Only allow initialization from the module's address
         if (!exists<Registry>(@weavelink)) {
@@ -105,7 +82,31 @@ module weavelink::mock_tokens {
         }
     }
 
-    /// Mint tokens to any recipient. Anyone can call this.
+    // === Helper Functions ===
+
+    // Initialize or get user's balance entry
+    fun get_or_create_user_balances(
+        registry: &mut Registry,
+        user: address
+    ): &mut Table<u8, u64> {
+        if (!table::contains(&registry.balances, user)) {
+            table::add(&mut registry.balances, user, table::new<u8, u64>());
+        };
+        table::borrow_mut(&mut registry.balances, user)
+    }
+
+    // Get balance, returns 0 if not found
+    fun get_balance(balances: &Table<u8, u64>, token_id: u8): u64 {
+        if (table::contains(balances, token_id)) {
+            *table::borrow(balances, token_id)
+        } else {
+            0
+        }
+    }
+
+    // === Entry Functions ===
+
+    // Mint tokens to any recipient. Anyone can call this.
     public entry fun mint(
         _account: &signer,
         recipient: address,
@@ -130,7 +131,7 @@ module weavelink::mock_tokens {
         });
     }
 
-    /// Burn tokens from any holder. Anyone can call this.
+    // Burn tokens from any holder. Anyone can call this.
     public entry fun burn(
         _account: &signer,
         from: address,
@@ -162,7 +163,7 @@ module weavelink::mock_tokens {
         });
     }
 
-    /// Transfer tokens between addresses. Anyone can call this.
+    // Transfer tokens between addresses. Anyone can call this.
     public entry fun transfer(
         _account: &signer,
         from: address,
@@ -203,7 +204,7 @@ module weavelink::mock_tokens {
 
     // === View Functions ===
 
-    /// Returns the balance of a given address for a given token_id.
+    // Returns the balance of a given address for a given token_id.
     #[view]
     public fun balance_of(addr: address, token_id: u8): u64 acquires Registry {
         assert_token_valid(token_id);
@@ -222,7 +223,7 @@ module weavelink::mock_tokens {
         get_balance(balances, token_id)
     }
 
-    /// Returns the total supply of a token (sum of all balances).
+    // Returns the total supply of a token (sum of all balances).
     #[view]
     public fun total_supply(token_id: u8): u64 acquires Registry {
         assert_token_valid(token_id);
