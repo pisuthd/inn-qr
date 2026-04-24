@@ -1,7 +1,7 @@
 /// @title WeaveLink Market -- Isolated Lending Pool
 /// @notice A Morpho Blue-inspired isolated lending market where each market pairs a
 ///         single loan token with a single collateral token 
-module weavelink::market {
+module weavelink::market_v1 {
 
     use std::signer;
     use std::table::{Self, Table};
@@ -14,181 +14,181 @@ module weavelink::market {
     //  Constants
     // =========================================================================
 
-    /// Scale factor for the health-factor view function (1.0 is represented as 100).
+    // Scale factor for the health-factor view function (1.0 is represented as 100).
     const HEALTH_SCALE: u64 = 100;
 
-    /// Seconds in a 365-day year, used to annualise the per-second borrow rate.
+    // Seconds in a 365-day year, used to annualise the per-second borrow rate.
     const SECONDS_PER_YEAR: u64 = 365 * 24 * 60 * 60;
 
     // =========================================================================
     //  Error Codes
     // =========================================================================
 
-    /// The supplied amount is zero or otherwise invalid.
+    // The supplied amount is zero or otherwise invalid.
     const EINVALID_AMOUNT: u64 = 1;
-    /// The market does not have enough un-borrowed liquidity.
+    // The market does not have enough un-borrowed liquidity.
     const EINSUFFICIENT_LIQUIDITY: u64 = 2;
-    /// The user does not have enough tokens / collateral for the operation.
+    // The user does not have enough tokens / collateral for the operation.
     const EINSUFFICIENT_COLLATERAL: u64 = 3;
-    /// The position's health factor would drop below 1 after the action.
+    // The position's health factor would drop below 1 after the action.
     const EHEALTH_FACTOR_BELOW_ONE: u64 = 4;
-    /// The requested market_id does not exist.
+    // The requested market_id does not exist.
     const EMARKET_NOT_FOUND: u64 = 5;
-    /// The caller is not the contract owner.
+    // The caller is not the contract owner.
     const EUNAUTHORIZED: u64 = 6;
-    /// The user has no position in the given market.
+    // The user has no position in the given market.
     const EPOSITION_NOT_FOUND: u64 = 7;
-    /// The caller is not authorized to act on behalf of the target user.
+    // The caller is not authorized to act on behalf of the target user.
     const ENOT_AUTHORIZED: u64 = 8;
-    /// A user attempted to authorize themselves (delegator == delegate).
+    // A user attempted to authorize themselves (delegator == delegate).
     const ESAME_ADDRESS: u64 = 9;
 
     // =========================================================================
     //  Data Structures
     // =========================================================================
 
-    /// An isolated lending market pairing one loan token with one collateral token.
-    /// Each market is uniquely identified by an auto-incremented `market_id`.
+    // An isolated lending market pairing one loan token with one collateral token.
+    // Each market is uniquely identified by an auto-incremented `market_id`.
     struct Market has key, store {
-        market_id: u64,           /// Auto-incremented unique identifier (1, 2, 3 ...)
-        loan_token: u8,           /// Token ID of the asset that can be supplied & borrowed
-        collateral_token: u8,     /// Token ID of the asset accepted as collateral
+        market_id: u64,           // Auto-incremented unique identifier (1, 2, 3 ...)
+        loan_token: u8,           // Token ID of the asset that can be supplied & borrowed
+        collateral_token: u8,     // Token ID of the asset accepted as collateral
 
-        /// Maximum liquidation loan-to-value (e.g. 80 means 80 %).
-        /// A position is unhealthy when (borrowed_value / collateral_value) > LLTV.
+        // Maximum liquidation loan-to-value (e.g. 80 means 80 %).
+        // A position is unhealthy when (borrowed_value / collateral_value) > LLTV.
         lltv: u64,
 
         // -- Interest-rate model parameters (all annualised, scaled by 1e6) --
 
-        base_rate: u64,           /// Borrow rate at 0 % utilization
-        slope: u64,               /// Rate slope between 0 % and `kink` utilization
-        kink: u64,                /// Utilization % at which the jump rate begins
-        jump_rate: u64,           /// Additional rate slope above `kink`
+        base_rate: u64,           // Borrow rate at 0 % utilization
+        slope: u64,               // Rate slope between 0 % and `kink` utilization
+        kink: u64,                // Utilization % at which the jump rate begins
+        jump_rate: u64,           // Additional rate slope above `kink`
 
         // -- Aggregate pool state --
 
-        total_supply: u64,        /// Total loan tokens supplied by all users
-        total_borrow: u64,        /// Total loan tokens currently borrowed
-        total_collateral: u64,    /// Total collateral tokens deposited
-        last_update: u64,         /// Unix timestamp (seconds) of last interest accrual
+        total_supply: u64,        // Total loan tokens supplied by all users
+        total_borrow: u64,        // Total loan tokens currently borrowed
+        total_collateral: u64,    // Total collateral tokens deposited
+        last_update: u64,         // Unix timestamp (seconds) of last interest accrual
     }
 
-    /// A user's position within a single market.
+    // A user's position within a single market.
     struct Position has key, store {
-        supplied: u64,            /// Loan tokens the user has supplied
-        borrowed: u64,            /// Loan tokens the user has borrowed
-        collateral: u64           /// Collateral tokens the user has deposited
+        supplied: u64,            // Loan tokens the user has supplied
+        borrowed: u64,            // Loan tokens the user has borrowed
+        collateral: u64           // Collateral tokens the user has deposited
     }
 
-    /// Stores per-user authorization maps: delegator -> (delegate -> is_authorized).
+    // Stores per-user authorization maps: delegator -> (delegate -> is_authorized).
     struct AuthorizationStore has key {
         authorizations: Table<address, Table<address, bool>>,
     }
 
-    /// Global singleton that owns all markets, positions, and the owner address.
+    // Global singleton that owns all markets, positions, and the owner address.
     struct MarketStore has key {
-        next_market_id: u64,                                    /// Next market_id to assign
-        markets: Table<u64, Market>,                            /// market_id -> Market
-        positions: Table<address, Table<u64, Position>>,        /// user -> (market_id -> Position)
-        owner: address                                          /// Address permitted to create markets
+        next_market_id: u64,                                    // Next market_id to assign
+        markets: Table<u64, Market>,                            // market_id -> Market
+        positions: Table<address, Table<u64, Position>>,        // user -> (market_id -> Position)
+        owner: address                                          // Address permitted to create markets
     }
 
     // =========================================================================
     //  Events
     // =========================================================================
 
-    /// Emitted when a new isolated market is created by the contract owner.
+    // Emitted when a new isolated market is created by the contract owner.
     #[event]
     struct MarketCreated has drop, store {
-        market_id: u64,           /// Assigned market identifier
-        loan_token: u8,           /// Token ID of the loan asset
-        collateral_token: u8,     /// Token ID of the collateral asset
-        lltv: u64                 /// Liquidation LTV (e.g. 80 = 80 %)
+        market_id: u64,           // Assigned market identifier
+        loan_token: u8,           // Token ID of the loan asset
+        collateral_token: u8,     // Token ID of the collateral asset
+        lltv: u64                 // Liquidation LTV (e.g. 80 = 80 %)
     }
 
-    /// Emitted when loan tokens are supplied to a market.
+    // Emitted when loan tokens are supplied to a market.
     #[event]
     struct Supply has drop, store {
-        caller: address,          /// Address that sent the tokens
-        on_behalf: address,       /// Address whose position is credited
-        market_id: u64,           /// Target market
-        amount: u64               /// Number of loan tokens supplied
+        caller: address,          // Address that sent the tokens
+        on_behalf: address,       // Address whose position is credited
+        market_id: u64,           // Target market
+        amount: u64               // Number of loan tokens supplied
     }
 
-    /// Emitted when supplied loan tokens are withdrawn from a market.
+    // Emitted when supplied loan tokens are withdrawn from a market.
     #[event]
     struct Withdraw has drop, store {
-        caller: address,          /// Address initiating the withdrawal
-        receiver: address,        /// Address receiving the tokens
-        market_id: u64,           /// Source market
-        amount: u64               /// Number of loan tokens withdrawn
+        caller: address,          // Address initiating the withdrawal
+        receiver: address,        // Address receiving the tokens
+        market_id: u64,           // Source market
+        amount: u64               // Number of loan tokens withdrawn
     }
 
-    /// Emitted when loan tokens are borrowed against collateral.
+    // Emitted when loan tokens are borrowed against collateral.
     #[event]
     struct Borrow has drop, store {
-        caller: address,          /// Address receiving the borrowed tokens
-        on_behalf: address,       /// Address whose position is debited
-        market_id: u64,           /// Source market
-        amount: u64               /// Number of loan tokens borrowed
+        caller: address,          // Address receiving the borrowed tokens
+        on_behalf: address,       // Address whose position is debited
+        market_id: u64,           // Source market
+        amount: u64               // Number of loan tokens borrowed
     }
 
-    /// Emitted when borrowed tokens are repaid.
+    // Emitted when borrowed tokens are repaid.
     #[event]
     struct Repay has drop, store {
-        caller: address,          /// Address sending the repayment
-        on_behalf: address,       /// Address whose debt is reduced
-        market_id: u64,           /// Target market
-        amount: u64               /// Number of loan tokens repaid (capped at debt)
+        caller: address,          // Address sending the repayment
+        on_behalf: address,       // Address whose debt is reduced
+        market_id: u64,           // Target market
+        amount: u64               // Number of loan tokens repaid (capped at debt)
     }
 
-    /// Emitted when collateral tokens are deposited into a market.
+    // Emitted when collateral tokens are deposited into a market.
     #[event]
     struct SupplyCollateral has drop, store {
-        caller: address,          /// Address that sent the collateral
-        on_behalf: address,       /// Address whose position is credited
-        market_id: u64,           /// Target market
-        amount: u64               /// Number of collateral tokens deposited
+        caller: address,          // Address that sent the collateral
+        on_behalf: address,       // Address whose position is credited
+        market_id: u64,           // Target market
+        amount: u64               // Number of collateral tokens deposited
     }
 
-    /// Emitted when collateral tokens are withdrawn from a market.
+    // Emitted when collateral tokens are withdrawn from a market.
     #[event]
     struct WithdrawCollateral has drop, store {
-        caller: address,          /// Address initiating the withdrawal
-        receiver: address,        /// Address receiving the collateral
-        market_id: u64,           /// Source market
-        amount: u64               /// Number of collateral tokens withdrawn
+        caller: address,          // Address initiating the withdrawal
+        receiver: address,        // Address receiving the collateral
+        market_id: u64,           // Source market
+        amount: u64               // Number of collateral tokens withdrawn
     }
 
-    /// Emitted when a position is liquidated.
+    // Emitted when a position is liquidated.
     #[event]
     struct Liquidate has drop, store {
-        liquidator: address,      /// Address performing the liquidation
-        borrower: address,        /// Address of the unhealthy borrower
-        market_id: u64,           /// Market in which liquidation occurred
-        repaid: u64,              /// Debt repaid by the liquidator
-        seized: u64               /// Collateral seized from the borrower
+        liquidator: address,      // Address performing the liquidation
+        borrower: address,        // Address of the unhealthy borrower
+        market_id: u64,           // Market in which liquidation occurred
+        repaid: u64,              // Debt repaid by the liquidator
+        seized: u64               // Collateral seized from the borrower
     }
 
-    /// Emitted when a user grants or revokes delegate authorization.
+    // Emitted when a user grants or revokes delegate authorization.
     #[event]
     struct AuthorizationUpdated has drop, store {
-        delegator: address,       /// User who is delegating (or revoking) permission
-        delegate: address,        /// Address being authorized (or de-authorized)
-        authorized: bool          /// `true` to grant, `false` to revoke
+        delegator: address,       // User who is delegating (or revoking) permission
+        delegate: address,        // Address being authorized (or de-authorized)
+        authorized: bool          // `true` to grant, `false` to revoke
     }
 
     // =========================================================================
     //  Internal Helpers
     // =========================================================================
 
-    /// Calculate the current annualised borrow rate for a market using the
-    /// piecewise-linear ("jump") interest-rate model.
-    ///
-    /// Returns a rate scaled by 1e6:
-    ///   - 0% utilization -> base_rate
-    ///   - 0%-kink%       -> linear interpolation from base_rate to base_rate + slope
-    ///   - > kink%         -> base_rate + slope + jump_rate * (util - kink) / (100 - kink)
+    // Calculate the current annualised borrow rate for a market using the
+    // piecewise-linear ("jump") interest-rate model.
+    //
+    // Returns a rate scaled by 1e6:
+    //   - 0% utilization -> base_rate
+    //   - 0%-kink%       -> linear interpolation from base_rate to base_rate + slope
+    //   - > kink%         -> base_rate + slope + jump_rate * (util - kink) / (100 - kink)
     fun calculate_borrow_rate(market: &Market): u64 {
         if (market.total_supply == 0) {
             return market.base_rate

@@ -17,7 +17,7 @@ module weavelink::operator {
     use std::hash;
     use initia_std::event;
 
-    use weavelink::market;
+    use weavelink::market_v1;
     use weavelink::mock_tokens;
 
     // === Constants ===
@@ -50,13 +50,13 @@ module weavelink::operator {
 
     // === Data Structures ===
 
-    /// Operator registry - admin manages whitelisted operators
+    // Operator registry - admin manages whitelisted operators
     struct OperatorStore has key {
         admin: address,
         operators: Table<address, bool>
     }
 
-    /// HTLC Escrow lock - holds USDC until settlement is proven or timeout
+    // HTLC Escrow lock - holds USDC until settlement is proven or timeout
     struct EscrowLock has store {
         request_id: u64,
         secret_hash: vector<u8>,       // sha3_256 hash of the secret
@@ -72,7 +72,7 @@ module weavelink::operator {
         status: u8                     // 0=locked, 1=claimed, 2=refunded
     }
 
-    /// Global store for all escrow requests
+    // Global store for all escrow requests
     struct RequestStore has key {
         next_id: u64,
         escrows: Table<u64, EscrowLock>,
@@ -137,7 +137,7 @@ module weavelink::operator {
 
     // === Admin Functions ===
 
-    /// Register a new operator (admin only)
+    // Register a new operator (admin only)
     public entry fun register_operator(admin: &signer, operator_addr: address) acquires OperatorStore {
         let store = borrow_global_mut<OperatorStore>(@weavelink);
         assert!(signer::address_of(admin) == store.admin, EUNAUTHORIZED);
@@ -149,7 +149,7 @@ module weavelink::operator {
         event::emit(OperatorRegistered { operator: operator_addr });
     }
 
-    /// Deregister an operator (admin only)
+    // Deregister an operator (admin only)
     public entry fun deregister_operator(admin: &signer, operator_addr: address) acquires OperatorStore {
         let store = borrow_global_mut<OperatorStore>(@weavelink);
         assert!(signer::address_of(admin) == store.admin, EUNAUTHORIZED);
@@ -162,7 +162,7 @@ module weavelink::operator {
 
     // === Internal Helpers ===
 
-    /// Check if address is a registered operator
+    // Check if address is a registered operator
     fun is_operator(store: &OperatorStore, addr: address): bool {
         if (table::contains(&store.operators, addr)) {
             *table::borrow(&store.operators, addr)
@@ -173,19 +173,19 @@ module weavelink::operator {
 
     // === HTLC Functions ===
 
-    /// Create a withdrawal request with HTLC escrow
-    ///
-    /// This function:
-    /// 1. Borrows USDC from user's market position (requires user authorization via market::set_authorization)
-    /// 2. Locks the USDC in an HTLC escrow
-    ///
-    /// The operator must be:
-    /// - Registered by admin
-    /// - Authorized by the user (via market::set_authorization)
-    ///
-    /// The user must have:
-    /// - Sufficient collateral in the market
-    /// - A healthy position (health factor > 1 after borrow)
+    // Create a withdrawal request with HTLC escrow
+    //
+    // This function:
+    // 1. Borrows USDC from user's market position (requires user authorization via market_v1::set_authorization)
+    // 2. Locks the USDC in an HTLC escrow
+    //
+    // The operator must be:
+    // - Registered by admin
+    // - Authorized by the user (via market_v1::set_authorization)
+    //
+    // The user must have:
+    // - Sufficient collateral in the market
+    // - A healthy position (health factor > 1 after borrow)
     public entry fun create_withdrawal(
         operator: &signer,
         user: address,
@@ -208,10 +208,10 @@ module weavelink::operator {
 
         // Borrow USDC from user's position (operator must be authorized by user)
         // This transfers USDC from market to operator
-        market::borrow(operator, user, market_id, amount);
+        market_v1::borrow(operator, user, market_id, amount);
 
         // Get loan token ID from market
-        let (loan_token, _, _, _, _, _, _) = market::get_market(market_id);
+        let (loan_token, _, _, _, _, _, _) = market_v1::get_market(market_id);
 
         // Lock USDC in escrow: transfer from operator to protocol address
         mock_tokens::transfer(operator, operator_addr, @weavelink, loan_token, amount);
@@ -254,11 +254,11 @@ module weavelink::operator {
         });
     }
 
-    /// Claim escrow - operator proves off-chain settlement by revealing the secret
-    ///
-    /// The secret must hash (sha3_256) to the secret_hash stored in the escrow.
-    /// On success, the locked USDC is released to the operator.
-    /// The secret is stored on-chain as proof of settlement (audit trail).
+    // Claim escrow - operator proves off-chain settlement by revealing the secret
+    //
+    // The secret must hash (sha3_256) to the secret_hash stored in the escrow.
+    // On success, the locked USDC is released to the operator.
+    // The secret is stored on-chain as proof of settlement (audit trail).
     public entry fun claim_escrow(
         operator: &signer,
         request_id: u64,
@@ -298,11 +298,11 @@ module weavelink::operator {
         });
     }
 
-    /// Refund escrow - after timeout, user claims the locked USDC
-    ///
-    /// Can only be called after the timeout has passed.
-    /// The USDC is returned to the user's wallet (not the market position).
-    /// The borrow debt remains in the market - user can repay manually.
+    // Refund escrow - after timeout, user claims the locked USDC
+    //
+    // Can only be called after the timeout has passed.
+    // The USDC is returned to the user's wallet (not the market position).
+    // The borrow debt remains in the market - user can repay manually.
     public entry fun refund_escrow(
         user: &signer,
         request_id: u64,
@@ -341,7 +341,7 @@ module weavelink::operator {
 
     // === View Functions ===
 
-    /// Check if an address is a registered operator
+    // Check if an address is a registered operator
     #[view]
     public fun is_operator_registered(addr: address): bool acquires OperatorStore {
         if (!exists<OperatorStore>(@weavelink)) {
@@ -351,9 +351,9 @@ module weavelink::operator {
         is_operator(store, addr)
     }
 
-    /// Get escrow details by request ID
-    /// Returns: (request_id, operator, user, token_id, amount, destination_type, status)
     #[view]
+    // Get escrow details by request ID
+    // Returns: (request_id, operator, user, token_id, amount, destination_type, status)
     public fun get_escrow(request_id: u64): (u64, address, address, u8, u64, u8, u8) acquires RequestStore {
         if (!exists<RequestStore>(@weavelink)) {
             return (0, @0x0, @0x0, 0, 0, 0, 0)
@@ -374,7 +374,7 @@ module weavelink::operator {
         )
     }
 
-    /// Get number of escrows for a user
+    // Get number of escrows for a user
     #[view]
     public fun get_user_escrow_count(user: address): u64 acquires RequestStore {
         if (!exists<RequestStore>(@weavelink)) {
@@ -387,7 +387,7 @@ module weavelink::operator {
         vector::length(table::borrow(&store.user_escrows, user))
     }
 
-    /// Get next request ID
+    // Get next request ID
     #[view]
     public fun get_next_request_id(): u64 acquires RequestStore {
         if (!exists<RequestStore>(@weavelink)) {
@@ -396,19 +396,19 @@ module weavelink::operator {
         borrow_global<RequestStore>(@weavelink).next_id
     }
 
-    /// Get destination type constant for fiat
+    // Get destination type constant for fiat
     public fun destination_fiat(): u8 { DESTINATION_FIAT }
 
-    /// Get destination type constant for cross-chain
+    // Get destination type constant for cross-chain
     public fun destination_cross_chain(): u8 { DESTINATION_CROSS_CHAIN }
 
-    /// Get status constant for locked
+    // Get status constant for locked
     public fun status_locked(): u8 { STATUS_LOCKED }
 
-    /// Get status constant for claimed
+    // Get status constant for claimed
     public fun status_claimed(): u8 { STATUS_CLAIMED }
 
-    /// Get status constant for refunded
+    // Get status constant for refunded
     public fun status_refunded(): u8 { STATUS_REFUNDED }
 
     // === Test Helpers ===
