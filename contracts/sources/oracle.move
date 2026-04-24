@@ -56,7 +56,7 @@ module weavelink::price_oracle {
     // === Constructor ===
 
     // Initialize the oracle  
-    fun init_oracle(sender: &signer) {
+    fun init_module(sender: &signer) {
         let sender_addr = signer::address_of(sender);
         
         move_to(sender, PriceOracle {
@@ -112,7 +112,7 @@ module weavelink::price_oracle {
 
     #[test_only]
     public fun init_for_testing(deployer: &signer) {
-        init_oracle(deployer)
+        init_module(deployer)
     }
 
     #[test_only]
