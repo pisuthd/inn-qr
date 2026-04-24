@@ -3,7 +3,7 @@ module weavelink::test_operator {
 
     use std::signer;
 
-    use weavelink::market;
+    use weavelink::market_v1;
     use weavelink::mock_tokens;
     use weavelink::operator;
     use weavelink::price_oracle;
@@ -25,7 +25,7 @@ module weavelink::test_operator {
     ) {
         // Initialize all modules
         mock_tokens::init_for_testing(deployer);
-        market::init_module_for_testing(deployer);
+        market_v1::init_module_for_testing(deployer);
         price_oracle::init_for_testing(deployer);
         operator::init_for_testing(deployer);
 
@@ -34,7 +34,7 @@ module weavelink::test_operator {
         price_oracle::set_price(deployer, 1, 2000000);  // S_INIT
 
         // Create market: USDC (loan=0) / S_INIT (collateral=1), LLTV=80%
-        market::create_market(deployer, 0, 1, 80, 100, 1000, 80, 2000);
+        market_v1::create_market(deployer, 0, 1, 80, 100, 1000, 80, 2000);
 
         // Mint tokens
         mock_tokens::mint(deployer, @0x1111, 1, 10000);  // user gets S_INIT (collateral)
@@ -42,9 +42,9 @@ module weavelink::test_operator {
         mock_tokens::mint(deployer, @0x3333, 0, 5000);   // operator_2 gets USDC
 
         // Each account supplies their own tokens (caller == on_behalf, no auth needed)
-        market::supply(operator_1, @0x2222, 1, 3000);    // operator_1 supplies own 3000 USDC
-        market::supply(operator_2, @0x3333, 1, 2000);    // operator_2 supplies own 2000 USDC
-        market::supply_collateral(user, @0x1111, 1, 10000);  // user locks own 10000 S_INIT
+        market_v1::supply(operator_1, @0x2222, 1, 3000);    // operator_1 supplies own 3000 USDC
+        market_v1::supply(operator_2, @0x3333, 1, 2000);    // operator_2 supplies own 2000 USDC
+        market_v1::supply_collateral(user, @0x1111, 1, 10000);  // user locks own 10000 S_INIT
 
         // Register operator_1
         operator::register_operator(deployer, @0x2222);
@@ -59,8 +59,8 @@ module weavelink::test_operator {
     ) {
         setup_all(deployer, user, operator_1, operator_2);
         // User authorizes operators to act on their behalf
-        market::set_authorization(user, signer::address_of(operator_1), true);
-        market::set_authorization(user, signer::address_of(operator_2), true);
+        market_v1::set_authorization(user, signer::address_of(operator_1), true);
+        market_v1::set_authorization(user, signer::address_of(operator_2), true);
     }
 
     // Helper: compute a secret hash
@@ -207,7 +207,7 @@ module weavelink::test_operator {
         assert!(status == operator::status_locked(), 7);
 
         // Verify user has borrow debt
-        let (_supplied, borrowed, _collateral) = market::get_position(@0x1111, 1);
+        let (_supplied, borrowed, _collateral) = market_v1::get_position(@0x1111, 1);
         assert!(borrowed == 500, 8);
 
         // Verify user escrow count
@@ -339,7 +339,7 @@ module weavelink::test_operator {
         assert!(user_usdc_after == user_usdc_before + 500, 3);
 
         // Verify borrow debt still exists (not auto-repaid)
-        let (_supplied, borrowed, _collateral) = market::get_position(@0x1111, 1);
+        let (_supplied, borrowed, _collateral) = market_v1::get_position(@0x1111, 1);
         assert!(borrowed == 500, 4);
     }
 
@@ -740,7 +740,7 @@ module weavelink::test_operator {
         assert!(s2 == operator::status_refunded(), 7);
 
         // Total borrow = 500 + 300 = 800
-        let (_, borrowed, _) = market::get_position(@0x1111, 1);
+        let (_, borrowed, _) = market_v1::get_position(@0x1111, 1);
         assert!(borrowed == 800, 8);
     }
 }
