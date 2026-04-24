@@ -5,8 +5,8 @@ function BottomNav({ activeTab, onTabChange }) {
     { id: 'home', label: 'HOME', Icon: Home },
     { id: 'wallet', label: 'WALLET', Icon: Wallet },
     { id: 'inventory', label: 'PAY', Icon: Package },
-    { id: 'leaderboard', label: 'PARTNERS', Icon: Users },
-    { id: 'profile', label: 'PROFILE', Icon: User },
+    // { id: 'leaderboard', label: 'PARTNERS', Icon: Users },
+    { id: 'portfolio', label: 'PORTFOLIO', Icon: User },
   ];
 
   return (

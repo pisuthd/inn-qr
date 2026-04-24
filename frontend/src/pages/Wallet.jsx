@@ -141,7 +141,7 @@ function Wallet() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <WalletIcon size={20} style={{ color: '#00e5c4' }} />
                         <div>
-                            <h2 className="card-title" style={{ margin: 0, fontSize: '1.1rem' }}>Wallet</h2>
+                            <h2 className="card-title" style={{ margin: 0, fontSize: '1.1rem' }}>Your Wallet</h2>
                             <span style={{ color: '#7dd3c2', fontSize: '0.7rem' }}>{shortenAddress(initiaAddress)}</span>
                         </div>
                     </div>

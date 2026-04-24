@@ -100,6 +100,12 @@ function Home({ onNavigate, onOpenModal }) {
   const handleMenuClick = (id) => {
     if (id === 'earn') {
       onOpenModal('earn');
+    } else if (id === 'deposit') {
+      onOpenModal('deposit');
+    } else if (id === 'borrow') {
+      onOpenModal('borrow');
+    } else if (id === 'repay') {
+      onOpenModal('repay');
     } else {
       onNavigate(id);
     }
@@ -123,7 +129,7 @@ function Home({ onNavigate, onOpenModal }) {
         <div className="hero-image">
           <div className="hero-glow" />
           <div className="hero-text" style={{ maxWidth: "400px" }}>
-            <h2 style={{ color: '#ffffff' }}>Spend Initia yield with {selectedCountry.currency}</h2>
+            <h2 style={{ color: '#ffffff' }}>Spend yield on Initia with {selectedCountry.currency}</h2>
             <p style={{ color: '#b8f5e3' }}>Use staked assets across interwoven rollups. Scan any QR code and pay in local currency. AI helps match with {selectedCountry.operators} local partners, settles in seconds.</p>
           </div>
         </div>

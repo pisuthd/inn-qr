@@ -6,7 +6,11 @@ import BottomNav from "./components/BottomNav.jsx";
 import Home from "./pages/Home.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Wallet from "./pages/Wallet.jsx";
+import Portfolio from "./pages/Portfolio.jsx";
 import Earn from "./pages/Earn.jsx";
+import Deposit from "./pages/Deposit.jsx";
+import Borrow from "./pages/Borrow.jsx";
+import Repay from "./pages/Repay.jsx";
 import { Wallet as WalletIcon, Users, Globe, Trophy, ChevronRight } from 'lucide-react';
 
 
@@ -45,27 +49,8 @@ function App() {
             </div>
           </div>
         );
-      case 'profile':
-        return (
-          <div className="fade-in">
-            <div className="card" style={{ textAlign: 'center' }}>
-              <h2 className="card-title">
-                <Users size={20} style={{ display: 'inline', marginRight: '8px', color: '#00e5c4' }} />
-                Profile
-              </h2>
-              {!initiaAddress ? (
-                <button onClick={openConnect} className="btn btn-primary">
-                  Connect Wallet
-                </button>
-              ) : (
-                <button onClick={openWallet} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {shortenAddress(initiaAddress)}
-                  <ChevronRight size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-        );
+      case 'portfolio':
+        return <Portfolio />;
       case 'home':
       default:
         return <Home onNavigate={handleNavigate} onOpenModal={setActiveModal} />;
@@ -85,6 +70,9 @@ function App() {
 
       {/* Modals */}
       {activeModal === 'earn' && <Earn isOpen={true} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'deposit' && <Deposit isOpen={true} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'borrow' && <Borrow isOpen={true} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'repay' && <Repay isOpen={true} onClose={() => setActiveModal(null)} />}
     </SettingsProvider>
   );
 }
