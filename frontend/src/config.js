@@ -1,8 +1,8 @@
 // Chain & module constants
 export const CHAIN_ID = "weavelink-1";
-export const MODULE_ADDRESS = "init17apyevc9ma8722k0kcxhrd7r6qu08yww703je6";
+export const MODULE_ADDRESS = "init14wyc4mrufq05j8ryx0m0249hjesyuzak9rq86s";
 export const MODULE_NAME = "mock_tokens";
-export const REST_URL = "http://localhost:1317";
+export const REST_URL = "https://d3pgy5i52ev547.cloudfront.net/rest";
 export const FEE_DENOM = "WLINK";
 
 // Token definitions
@@ -28,9 +28,9 @@ export const customChain = {
         svg: "https://raw.githubusercontent.com/initia-labs/initia-registry/main/testnets/initia/images/initia.svg",
     },
     apis: {
-        rpc: [{ address: "http://localhost:26657" }],
-        rest: [{ address: "http://localhost:1317" }],
-        indexer: [{ address: "http://localhost:8080" }],
+        rpc: [{ address: "https://d3pgy5i52ev547.cloudfront.net/rpc" }],
+        rest: [{ address: "https://d3pgy5i52ev547.cloudfront.net/rest" }],
+        indexer: [{ address: "https://d3pgy5i52ev547.cloudfront.net/rest" }],
         "json-rpc": [{ address: "http://localhost:8545" }],
     },
     fees: {
