@@ -230,19 +230,32 @@ function Home({ onNavigate, onOpenModal }) {
       {/* CTA */}
       <div className="card" style={{ textAlign: 'center' }}>
         <h3 className="card-title">Ready to begin?</h3>
-        <p style={{ color: '#b8f5e3', marginBottom: '1rem' }}>
-          Connect your wallet to start earning yield and spending via QR.
+        <p style={{ color: '#b8f5e3', marginBottom: '0.75rem' }}>
+          Get your gas to get started on WeaveLink. Clone the repo and run:
         </p>
-        {!initiaAddress ? (
-          <button onClick={openConnect} className="btn btn-primary">
-            Connect Wallet
-          </button>
-        ) : (
-          <button onClick={openWallet} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {shortenAddress(initiaAddress)}
-            <ChevronRight size={16} />
-          </button>
-        )}
+        <div style={{ 
+          background: '#0d0d0d', 
+          border: '1px solid rgba(0, 229, 196, 0.2)', 
+          borderRadius: '8px', 
+          padding: '1rem', 
+          textAlign: 'left',
+          marginBottom: '0.5rem',
+          fontFamily: 'monospace',
+          fontSize: '0.8rem'
+        }}>
+          <div style={{ color: '#7dd3c2' }}>$ git clone https://github.com/pisuthd/weavelink</div>
+          <div style={{ color: '#7dd3c2' }}>$ cd scripts</div>
+          <div style={{ color: '#7dd3c2' }}>$ npm install</div>
+          <div style={{ color: '#f97316' }}>$ node faucet.js YOUR_ADDRESS</div>
+        </div>
+        <a 
+          href="https://github.com/pisuthd/weavelink" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{ color: '#00e5c4', fontSize: '0.75rem', textDecoration: 'underline' }}
+        >
+          View on GitHub →
+        </a>
       </div>
     </div>
   );
