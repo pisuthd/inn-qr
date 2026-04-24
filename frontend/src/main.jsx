@@ -16,6 +16,7 @@ import { mainnet } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.jsx";
 import "./index.css";
+import { customChain } from "./config.js";
 
 injectStyles(InterwovenKitStyles);
 
@@ -24,52 +25,6 @@ const wagmiConfig = createConfig({
   chains: [mainnet],
   transports: { [mainnet.id]: http() },
 });
-
-const customChain = {
-  chain_id: "weavelink-1",
-  chain_name: "weavelink",
-  pretty_name: "BlockForge",
-  network_type: "testnet",
-  bech32_prefix: "init",
-  logo_URIs: {
-    png: "https://raw.githubusercontent.com/initia-labs/initia-registry/main/testnets/initia/images/initia.png",
-    svg: "https://raw.githubusercontent.com/initia-labs/initia-registry/main/testnets/initia/images/initia.svg",
-  },
-  apis: {
-    rpc: [{ address: "http://localhost:26657" }],
-    rest: [{ address: "http://localhost:1317" }],
-    indexer: [{ address: "http://localhost:8080" }],
-    "json-rpc": [{ address: "http://localhost:8545" }],
-  },
-  fees: {
-    fee_tokens: [
-      {
-        denom: "WLINK",
-        fixed_min_gas_price: 0,
-        low_gas_price: 0,
-        average_gas_price: 0,
-        high_gas_price: 0,
-      },
-    ],
-  },
-  staking: {
-    staking_tokens: [{ denom: "WLINK" }],
-  },
-  metadata: {
-    is_l1: false,
-    minitia: {
-      type: "minimove",
-    },
-  },
-  native_assets: [
-    {
-      denom: "WLINK",
-      name: "Weavelink",
-      symbol: "WLINK",
-      decimals: 18,
-    },
-  ],
-};
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

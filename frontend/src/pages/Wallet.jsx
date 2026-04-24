@@ -1,37 +1,23 @@
 import { useState, useEffect, useCallback } from "react";
 import { useInterwovenKit } from "@initia/interwovenkit-react";
 import { RESTClient, AccAddress, bcs } from "@initia/initia.js";
-import { MsgExecute } from "@initia/initia.proto/initia/move/v1/tx";
-import { Buffer } from "buffer";
-import { RefreshCw, Plus, Wallet as WalletIcon, ChevronRight } from 'lucide-react';
-
-const CHAIN_ID = "weavelink-1";
-const MODULE_ADDRESS = "init17apyevc9ma8722k0kcxhrd7r6qu08yww703je6";
-const MODULE_NAME = "mock_tokens";
-const REST_URL = "http://localhost:1317";
+import { MsgExecute } from "@initia/initia.proto/initia/move/v1/tx"; 
+import { RefreshCw, Plus, Wallet as WalletIcon } from 'lucide-react';
+import {
+    CHAIN_ID,
+    MODULE_ADDRESS,
+    MODULE_NAME,
+    REST_URL,
+    FEE_DENOM,
+    DECIMALS,
+    TOKENS,
+} from "../config.js";
 
 const rest = new RESTClient(REST_URL, { chainId: CHAIN_ID });
-
-const TOKENS = [
-    { id: 0, name: "USDC", symbol: "USDC", color: "#2775CA" },
-    { id: 1, name: "S_INIT", symbol: "S_INIT", color: "#00E5C4" },
-    { id: 2, name: "S_LP", symbol: "S_LP", color: "#A855F7" },
-    { id: 3, name: "CABAL_IUSD", symbol: "IUSD", color: "#F59E0B" },
-    { id: 4, name: "CABAL_DNIUSD", symbol: "DNIUSD", color: "#EC4899" },
-];
-
-// Helper to encode address for Move view function
-function encodeAddress(address) {
-    const hexAddr = AccAddress.toHex(address)
-        .replace("0x", "")
-        .padStart(64, "0");
-    return Buffer.from(hexAddr, "hex").toString("base64");
-}
 
 // Fetch balance for a specific token
 async function fetchBalance(address, tokenId) {
     try {
-
         const res = await rest.move.viewFunction(
             MODULE_ADDRESS,
             MODULE_NAME,
@@ -42,8 +28,7 @@ async function fetchBalance(address, tokenId) {
                 bcs.u8().serialize(tokenId).toBase64(),
             ]
         );
- 
-        return res
+        return res;
     } catch (err) {
         console.error(`Failed to fetch balance for token ${tokenId}:`, err);
         return 0;
@@ -62,10 +47,12 @@ async function fetchAllBalances(address) {
 }
 
 function Wallet() {
+
     const { initiaAddress, requestTxSync } = useInterwovenKit();
     const [balances, setBalances] = useState({});
     const [loading, setLoading] = useState(false);
     const [minting, setMinting] = useState(null);
+    const [filter, setFilter] = useState("all");
 
     const shortenAddress = (addr) => {
         if (!addr) return "";
@@ -83,15 +70,20 @@ function Wallet() {
         }
     }, [initiaAddress]);
 
+    useEffect(() => {
+        refresh();
+    }, []);
 
-    const sendMintTx = async (tokenId, amount = 1000) => {
+    const sendMintTx = async (tokenId) => {
         if (!initiaAddress) return;
+        const token = TOKENS.find(t => t.id === tokenId);
+        if (!token) return;
+        const rawAmount = BigInt(token.mintAmount) * BigInt(10 ** token.decimals);
         setMinting(tokenId);
         try {
-            const b64Recipient = encodeAddress(initiaAddress);
             await requestTxSync({
                 chainId: CHAIN_ID,
-                feeDenom: "WLINK",
+                feeDenom: FEE_DENOM,
                 messages: [
                     {
                         typeUrl: "/initia.move.v1.MsgExecute",
@@ -104,7 +96,7 @@ function Wallet() {
                             args: [
                                 bcs.address().serialize(initiaAddress).toBytes(),
                                 bcs.u8().serialize(tokenId).toBytes(),
-                                bcs.u64().serialize(amount).toBytes(),
+                                bcs.u64().serialize(rawAmount).toBytes(),
                             ]
                         }),
                     },
@@ -118,8 +110,12 @@ function Wallet() {
         }
     };
 
-    const formatBalance = (balance) => { 
-        return balance.toString();
+    const formatBalance = (balance, decimals = DECIMALS) => {
+        if (!balance || balance === 0) return "0." + "0".repeat(decimals);
+        const str = BigInt(balance).toString().padStart(decimals + 1, "0");
+        const intPart = str.slice(0, str.length - decimals) || "0";
+        const decPart = str.slice(str.length - decimals);
+        return `${intPart}.${decPart}`;
     };
 
     if (!initiaAddress) {
@@ -138,35 +134,55 @@ function Wallet() {
 
     return (
         <div className="fade-in">
-            {/* Wallet Header */}
+            {/* Combined Wallet Card */}
             <div className="card" style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <WalletIcon size={24} style={{ color: '#00e5c4' }} />
+                        <WalletIcon size={20} style={{ color: '#00e5c4' }} />
                         <div>
-                            <h2 className="card-title" style={{ margin: 0, fontSize: '1.25rem' }}>Wallet</h2>
-                            <span style={{ color: '#7dd3c2', fontSize: '0.75rem' }}>{shortenAddress(initiaAddress)}</span>
+                            <h2 className="card-title" style={{ margin: 0, fontSize: '1.1rem' }}>Wallet</h2>
+                            <span style={{ color: '#7dd3c2', fontSize: '0.7rem' }}>{shortenAddress(initiaAddress)}</span>
                         </div>
                     </div>
                     <button
                         onClick={refresh}
                         className="btn btn-secondary"
                         disabled={loading}
-                        style={{ padding: '0.5rem' }}
+                        style={{ padding: '0.4rem' }}
                     >
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                     </button>
                 </div>
-            </div>
 
-            {/* Token Balances */}
-            <div className="card" style={{ marginBottom: '1rem' }}>
-                <h3 className="card-title" style={{ fontSize: '1rem', marginBottom: '1rem' }}>
-                    Token Balances
-                </h3>
+                {/* Filter tabs */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    {["all", "earn"].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setFilter(tab)}
+                            style={{
+                                padding: '0.3rem 0.75rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: filter === tab ? 'rgba(0, 229, 196, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                color: filter === tab ? '#00e5c4' : '#7dd3c2',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            {tab === "all" ? "All" : "Earn"}
+                        </button>
+                    ))}
+                </div>
 
+                {/* Token list */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {TOKENS.map((token) => (
+                    {TOKENS
+                        .filter((token) => filter === "all" || token.apr !== null)
+                        .map((token) => (
                         <div
                             key={token.id}
                             style={{
@@ -180,25 +196,45 @@ function Wallet() {
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <div
-                                    style={{
-                                        width: '32px',
-                                        height: '32px',
-                                        borderRadius: '50%',
-                                        background: token.color,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 'bold',
-                                        color: 'white',
-                                    }}
-                                >
-                                    {token.symbol.charAt(0)}
+                                <div style={{ position: 'relative', width: token.isLp ? '40px' : '32px', height: '32px', flexShrink: 0 }}>
+                                    {token.isLp ? (
+                                        <>
+                                            <img
+                                                src={token.lpIcons[0]}
+                                                alt="Token A"
+                                                style={{ width: '24px', height: '24px', borderRadius: '50%', position: 'absolute', top: 0, left: 0, zIndex: 2, border: '2px solid #1a1a2e' }}
+                                            />
+                                            <img
+                                                src={token.lpIcons[1]}
+                                                alt="Token B"
+                                                style={{ width: '24px', height: '24px', borderRadius: '50%', position: 'absolute', bottom: 0, right: 0, zIndex: 1, border: '2px solid #1a1a2e' }}
+                                            />
+                                        </>
+                                    ) : (
+                                        <img
+                                            src={token.icon}
+                                            alt={token.symbol}
+                                            style={{ width: '32px', height: '32px', borderRadius: '50%' }}
+                                        />
+                                    )}
                                 </div>
                                 <div>
                                     <div style={{ color: '#ffffff', fontWeight: '600' }}>{token.name}</div>
-                                    <div style={{ color: '#7dd3c2', fontSize: '0.7rem' }}>{token.symbol}</div>
+                                    <div style={{ color: '#7dd3c2', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        {token.protocol}
+                                        {token.apr && (
+                                            <span style={{
+                                                background: 'rgba(0, 229, 196, 0.15)',
+                                                color: '#00e5c4',
+                                                padding: '0.1rem 0.35rem',
+                                                borderRadius: '4px',
+                                                fontSize: '0.65rem',
+                                                fontWeight: '600',
+                                            }}>
+                                                {token.apr}% APR
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
