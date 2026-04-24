@@ -158,7 +158,7 @@ function Portfolio() {
 
                     {/* Supplied Positions */}
                     <div className="card" style={{ marginBottom: '1rem' }}>
-                        <h3 className="card-title" style={{ fontSize: '1rem' }}>Supplied Positions (USDC)</h3>
+                        <h3 className="card-title" style={{ fontSize: '1rem' }}>Supplied Positions</h3>
                         {suppliedPositions.length === 0 ? (
                             <p style={{ color: '#7dd3c2', fontSize: '0.875rem' }}>No supplied positions</p>
                         ) : (

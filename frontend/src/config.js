@@ -1,7 +1,6 @@
 // Chain & module constants
 export const CHAIN_ID = "weavelink-1";
-export const MODULE_ADDRESS = "init14wyc4mrufq05j8ryx0m0249hjesyuzak9rq86s";
-export const MODULE_NAME = "mock_tokens";
+export const MODULE_ADDRESS = "init14wyc4mrufq05j8ryx0m0249hjesyuzak9rq86s"; 
 export const REST_URL = "https://d3pgy5i52ev547.cloudfront.net/rest";
 export const FEE_DENOM = "WLINK";
 

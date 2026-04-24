@@ -291,7 +291,7 @@ function Deposit({ isOpen, onClose }) {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                <button onClick={handleMax} style={{ background: 'none', border: 'none', color: '#00e5c4', fontSize: '0.75rem', cursor: 'pointer' }}>Balance: {formatBalance(collateralBalance)} {collateralToken.symbol}</button>
+                                <button onClick={handleMax} style={{ background: 'none', border: 'none', color: '#00e5c4', fontSize: '0.75rem', cursor: 'pointer' }}>Max: {formatBalance(collateralBalance)} {collateralToken.symbol}</button>
                             </div>
                             <button onClick={handleDeposit} disabled={depositing || !depositAmount || parseFloat(depositAmount) <= 0} style={{ width: '100%', background: '#00e5c4', color: '#1a1a2e', border: 'none', borderRadius: '10px', padding: '0.875rem', fontSize: '1rem', fontWeight: '600', cursor: (depositing || !depositAmount || parseFloat(depositAmount) <= 0) ? 'not-allowed' : 'pointer', opacity: (depositing || !depositAmount || parseFloat(depositAmount) <= 0) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                                 {depositing ? <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> : `Deposit ${collateralToken.symbol}`}

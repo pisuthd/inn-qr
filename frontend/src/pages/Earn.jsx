@@ -28,7 +28,7 @@ async function fetchMarketData(marketId) {
             [],
             [bcs.u64().serialize(marketId).toBase64()]
         );
-        const [loanToken, collateralToken, totalSupply, totalBorrow, , lltv] = res;
+        const [loanToken, collateralToken, totalSupply, totalBorrow, , lltv, borrowRate] = res;
         return {
             marketId,
             loanToken,
@@ -36,6 +36,7 @@ async function fetchMarketData(marketId) {
             totalSupply: Number(totalSupply || 0),
             totalBorrow: Number(totalBorrow || 0),
             lltv: Number(lltv || 0),
+            borrowRate: Number(borrowRate || 0),
         };
     } catch (err) {
         console.error(`Failed to fetch market ${marketId}:`, err);
@@ -131,6 +132,15 @@ function Earn({ isOpen, onClose }) {
         return `${util.toFixed(2)}%`;
     };
 
+    // Calculate Supply APY: Borrow_APY × Utilization (no protocol fee)
+    const getSupplyAPY = () => {
+        if (!currentMarket || currentMarket.totalSupply === 0 || currentMarket.borrowRate === 0) return "0.00";
+        const borrowAPY = currentMarket.borrowRate / 1000000; // rate is 1e6 scale
+        const utilization = currentMarket.totalBorrow / currentMarket.totalSupply;
+        const supplyAPY = borrowAPY * utilization;
+        return supplyAPY.toFixed(2);
+    };
+
     const handleMax = () => {
         setSupplyAmount(formatBalance(usdcBalance));
     };
@@ -178,7 +188,7 @@ function Earn({ isOpen, onClose }) {
             isOpen={isOpen}
             onClose={onClose}
             title="Earn with USDC"
-            subtitle="You can earn with USDC by providing liquidity for those who want to spend yield off-ramp"
+            subtitle="You can earn with USDC by providing liquidity for those who need"
         >
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -237,17 +247,23 @@ function Earn({ isOpen, onClose }) {
                             padding: '1.25rem',
                         }}>
                             {/* Token header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <img
-                                    src={USDC_TOKEN.icon}
-                                    alt="USDC"
-                                    style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-                                />
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>USDC</div>
+                            {/* Row 1: USDC centered */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                <img src={USDC_TOKEN.icon} alt="USDC" style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
+                                <span style={{ color: '#ffffff', fontWeight: '600', fontSize: '1.25rem' }}>USDC</span>
+                            </div>
+                            
+                            {/* Row 2: Two tokens side by side */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
+                                {/* Left: USDC */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                    <span style={{ color: '#7dd3c2', fontSize: '0.9rem', fontWeight: '500' }}>USDC</span>
+                                    <img src={USDC_TOKEN.icon} alt="USDC" style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ color: '#7dd3c2', fontSize: '0.9rem' }}>→</span>
+                                {/* Middle separator */}
+                                <span style={{ color: '#7dd3c2', fontSize: '1rem' }}>|</span>
+                                {/* Right: Collateral */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-start' }}>
                                     {collateralToken.isLp ? (
                                         <div style={{ position: 'relative', width: '24px', height: '24px' }}>
                                             <img src={collateralToken.lpIcons[0]} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%', position: 'absolute', top: 0, left: 0, zIndex: 2, border: '1px solid #1a1a2e' }} />
@@ -264,15 +280,15 @@ function Earn({ isOpen, onClose }) {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
                                     <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Total Supply</div>
-                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentMarket.totalSupply)}</div>
+                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentMarket.totalSupply)} USDC</div>
                                 </div>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
                                     <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Total Borrow</div>
-                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentMarket.totalBorrow)}</div>
+                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentMarket.totalBorrow)} USDC</div>
                                 </div>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
                                     <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Supply APY</div>
-                                    <div style={{ color: '#00e5c4', fontWeight: '600', fontSize: '1rem' }}>0%</div>
+                                    <div style={{ color: '#00e5c4', fontWeight: '600', fontSize: '1rem' }}>{getSupplyAPY()}%</div>
                                 </div>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
                                     <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Utilization</div>

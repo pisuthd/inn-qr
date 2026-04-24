@@ -17,6 +17,15 @@ const rest = new RESTClient(REST_URL, { chainId: CHAIN_ID });
 // Market IDs to display
 const MARKET_IDS = [1, 2, 3, 4];
 
+// Hardcoded USD prices (scaled by 1e6 for raw token values)
+const PRICES = {
+    0: 1000000,  // USDC: $1.00
+    1: 90000,    // sINIT: $0.09
+    2: 100000,   // LP USDC-INIT: $0.10
+    3: 100000,   // Cabal iUSD: $0.10
+    4: 100000,   // Delta Neutral INIT: $0.10
+};
+
 const USDC_TOKEN = TOKENS.find(t => t.id === 0);
 
 async function fetchMarketData(marketId) {
@@ -28,12 +37,16 @@ async function fetchMarketData(marketId) {
             [],
             [bcs.u64().serialize(marketId).toBase64()]
         );
-        const [loanToken, collateralToken, , , , lltv] = res;
+        const [loanToken, collateralToken, totalSupply, totalBorrow, totalCollateral, lltv, borrowRate] = res;
         return {
             marketId,
-            loanToken,
-            collateralToken,
+            loanToken: Number(loanToken || 0),
+            collateralToken: Number(collateralToken || 0),
+            totalSupply: Number(totalSupply || 0),
+            totalBorrow: Number(totalBorrow || 0),
+            totalCollateral: Number(totalCollateral || 0),
             lltv: Number(lltv || 0),
+            borrowRate: Number(borrowRate || 0),
         };
     } catch (err) {
         console.error(`Failed to fetch market ${marketId}:`, err);
@@ -142,6 +155,9 @@ function Repay({ isOpen, onClose, initialMarketId, onSuccess }) {
     const collateralToken = currentMarket ? TOKENS.find(t => t.id === Number(currentMarket.collateralToken)) || TOKENS[0] : null;
     const currentPosition = currentMarket ? positions[currentMarket.marketId] : null;
     const showCarousel = !initialMarketId;
+    
+    // Calculate borrow APY: rate is scaled by 1e6, so divide by 1000000 to get percentage
+    const borrowAPY = currentMarket ? (currentMarket.borrowRate / 1000000).toFixed(2) : "0.00";
 
     const goNext = () => {
         if (currentIndex < markets.length - 1) {
@@ -251,57 +267,39 @@ function Repay({ isOpen, onClose, initialMarketId, onSuccess }) {
                     {/* Market card */}
                     {currentMarket && collateralToken && (
                         <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(0, 229, 196, 0.15)', borderRadius: '12px', padding: '1.25rem' }}>
-                            {/* Token header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <div style={{ position: 'relative', width: collateralToken.isLp ? '48px' : '40px', height: '40px', flexShrink: 0 }}>
-                                    {collateralToken.isLp ? (
-                                        <>
-                                            <img
-                                                src={collateralToken.lpIcons[0]}
-                                                alt="Token A"
-                                                style={{ width: '28px', height: '28px', borderRadius: '50%', position: 'absolute', top: 0, left: 0, zIndex: 2, border: '2px solid #1a1a2e' }}
-                                            />
-                                            <img
-                                                src={collateralToken.lpIcons[1]}
-                                                alt="Token B"
-                                                style={{ width: '28px', height: '28px', borderRadius: '50%', position: 'absolute', bottom: 0, right: 0, zIndex: 1, border: '2px solid #1a1a2e' }}
-                                            />
-                                        </>
-                                    ) : (
-                                        <img
-                                            src={collateralToken.icon}
-                                            alt={collateralToken.name}
-                                            style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-                                        />
-                                    )}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{collateralToken.name}</div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ color: '#7dd3c2', fontSize: '0.9rem' }}>←</span>
-                                    <img src={USDC_TOKEN.icon} alt="USDC" style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
-                                    <span style={{ color: '#7dd3c2', fontSize: '0.9rem', fontWeight: '500' }}>USDC</span>
-                                </div>
+                            {/* Token header - collateral only, centered */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                {collateralToken.isLp ? (
+                                    <div style={{ position: 'relative', width: '48px', height: '48px' }}>
+                                        <img src={collateralToken.lpIcons[0]} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', position: 'absolute', top: 0, left: 0, zIndex: 2, border: '2px solid #1a1a2e' }} />
+                                        <img src={collateralToken.lpIcons[1]} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', position: 'absolute', bottom: 0, right: 0, zIndex: 1, border: '2px solid #1a1a2e' }} />
+                                    </div>
+                                ) : (
+                                    <img src={collateralToken.icon} alt={collateralToken.name} style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
+                                )}
+                                <span style={{ color: '#ffffff', fontWeight: '600', fontSize: '1.25rem' }}>{collateralToken.name}</span>
                             </div>
 
                             {/* Position stats - 2x2 grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
                                     <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Your Debt</div>
-                                    <div style={{ color: '#f97316', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentPosition?.borrowed || 0)}</div>
-                                </div>
-                                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
-                                    <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Remaining</div>
-                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentPosition?.borrowed || 0)}</div>
+                                    <div style={{ color: '#f97316', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentPosition?.borrowed || 0)} USDC</div>
+                                    <div style={{ color: '#7dd3c2', fontSize: '0.65rem' }}>${((currentPosition?.borrowed || 0) / 1_000_000).toFixed(2)}</div>
                                 </div>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
                                     <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Collateral</div>
-                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentPosition?.collateral || 0)}</div>
+                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(currentPosition?.collateral || 0)} {collateralToken.symbol}</div>
+                                    <div style={{ color: '#7dd3c2', fontSize: '0.65rem' }}>${((currentPosition?.collateral || 0) * (PRICES[Number(currentMarket.collateralToken)] || 1000000) / 1_000_000 / 1_000_000).toFixed(2)}</div>
                                 </div>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
-                                    <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>APY</div>
-                                    <div style={{ color: '#f97316', fontWeight: '600', fontSize: '1rem' }}>0%</div>
+                                    <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Wallet Balance</div>
+                                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '1rem' }}>{formatNumber(usdcBalance)} USDC</div>
+                                    <div style={{ color: '#7dd3c2', fontSize: '0.65rem' }}>${(usdcBalance / 1_000_000).toFixed(2)}</div>
+                                </div>
+                                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px' }}>
+                                    <div style={{ color: '#7dd3c2', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Borrow APY</div>
+                                    <div style={{ color: '#f97316', fontWeight: '600', fontSize: '1rem' }}>{borrowAPY}%</div>
                                 </div>
                             </div>
 
@@ -313,7 +311,7 @@ function Repay({ isOpen, onClose, initialMarketId, onSuccess }) {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                <button onClick={handleMax} style={{ background: 'none', border: 'none', color: '#00e5c4', fontSize: '0.75rem', cursor: 'pointer' }}>Max: {formatBalance(usdcBalance)}</button>
+                                <button onClick={handleMax} style={{ background: 'none', border: 'none', color: '#00e5c4', fontSize: '0.75rem', cursor: 'pointer' }}>Max: {formatBalance(usdcBalance)} USDC</button>
                             </div>
                             <button onClick={handleRepay} disabled={repaying || !repayAmount || parseFloat(repayAmount) <= 0} style={{ width: '100%', background: '#00e5c4', color: '#1a1a2e', border: 'none', borderRadius: '10px', padding: '0.875rem', fontSize: '1rem', fontWeight: '600', cursor: (repaying || !repayAmount || parseFloat(repayAmount) <= 0) ? 'not-allowed' : 'pointer', opacity: (repaying || !repayAmount || parseFloat(repayAmount) <= 0) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                                 {repaying ? <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> : "Repay USDC"}

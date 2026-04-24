@@ -24,10 +24,12 @@ function Header({ activeTab, onTabChange }) {
         <h1 className="header-logo">
           WeaveLink
         </h1>
+
         
+
         {/* Where to spend dropdown */}
         <div className="dropdown-container" ref={dropdownRef}>
-          <button 
+          <button
             onClick={() => setIsOpen(!isOpen)}
             className="dropdown-trigger"
           >
@@ -36,7 +38,7 @@ function Header({ activeTab, onTabChange }) {
             <span className="dropdown-country-name">{selectedCountry.name}</span>
             <ChevronDown size={12} className={`dropdown-arrow ${isOpen ? 'rotated' : ''}`} />
           </button>
-          
+
           {isOpen && (
             <div className="dropdown-menu">
               {countries.map((country) => (

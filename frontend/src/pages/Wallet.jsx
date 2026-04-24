@@ -5,13 +5,14 @@ import { MsgExecute } from "@initia/initia.proto/initia/move/v1/tx";
 import { RefreshCw, Plus, Wallet as WalletIcon } from 'lucide-react';
 import {
     CHAIN_ID,
-    MODULE_ADDRESS,
-    MODULE_NAME,
+    MODULE_ADDRESS, 
     REST_URL,
     FEE_DENOM,
     DECIMALS,
     TOKENS,
 } from "../config.js";
+
+const MODULE_NAME = "mock_tokens"
 
 const rest = new RESTClient(REST_URL, { chainId: CHAIN_ID });
 
