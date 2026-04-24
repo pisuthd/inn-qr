@@ -6,11 +6,13 @@ import BottomNav from "./components/BottomNav.jsx";
 import Home from "./pages/Home.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Wallet from "./pages/Wallet.jsx";
+import Earn from "./pages/Earn.jsx";
 import { Wallet as WalletIcon, Users, Globe, Trophy, ChevronRight } from 'lucide-react';
 
 
 function App() {
   const [activeTab, setActiveTab] = useState('home');
+  const [activeModal, setActiveModal] = useState(null);
   const { initiaAddress, openConnect, openWallet } = useInterwovenKit();
 
   const shortenAddress = (addr) => {
@@ -66,7 +68,7 @@ function App() {
         );
       case 'home':
       default:
-        return <Home onNavigate={handleNavigate} />;
+        return <Home onNavigate={handleNavigate} onOpenModal={setActiveModal} />;
     }
   };
 
@@ -80,6 +82,9 @@ function App() {
       <footer className="footer" style={{ color: '#7dd3c2' }}>
         POWERED BY INITIA • INTERWOVEN
       </footer>
+
+      {/* Modals */}
+      {activeModal === 'earn' && <Earn isOpen={true} onClose={() => setActiveModal(null)} />}
     </SettingsProvider>
   );
 }
