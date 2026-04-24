@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useInterwovenKit } from "@initia/interwovenkit-react";
 import { RESTClient, bcs } from "@initia/initia.js";
-import { RefreshCw, ChevronRight, Wallet as WalletIcon } from 'lucide-react';
+import { RefreshCw, ChevronRight, User } from 'lucide-react';
 import {
     CHAIN_ID,
     MODULE_ADDRESS,
@@ -99,7 +99,7 @@ function Portfolio() {
         return (
             <div className="fade-in">
                 <div className="card" style={{ textAlign: 'center' }}>
-                    <WalletIcon size={48} style={{ color: '#7dd3c2', marginBottom: '1rem' }} />
+                    <User size={48} style={{ color: '#7dd3c2', marginBottom: '1rem' }} />
                     <h2 className="card-title">Portfolio</h2>
                     <p style={{ color: '#b8f5e3' }}>Connect wallet to view positions</p>
                 </div>
@@ -110,13 +110,17 @@ function Portfolio() {
     return (
         <div className="fade-in">
             <div className="card" style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <WalletIcon size={20} style={{ color: '#00e5c4' }} />
-                    <div>
-                        <h2 className="card-title" style={{ margin: 0, fontSize: '1.1rem' }}>Portfolio</h2>
-                        <span style={{ color: '#7dd3c2', fontSize: '0.7rem' }}>{`${initiaAddress?.slice(0, 8)}...${initiaAddress?.slice(-4)}`}</span>
-                    </div>
-                </div>
+                <h2 style={{ 
+                    fontSize: "1.25rem", 
+                    fontWeight: 700, 
+                    marginBottom: "0.25rem",
+                    fontFamily: "var(--font-orbitron)",
+                    color: "#ffffff"
+                }}>
+                    <User size={20} style={{ display: 'inline', marginRight: '8px', color: '#00e5c4' }} />
+                    Your Portfolio
+                </h2>
+                {/* <span style={{ color: '#7dd3c2', fontSize: '0.7rem' }}>{`${initiaAddress?.slice(0, 8)}...${initiaAddress?.slice(-4)}`}</span> */}
                 <p style={{ color: '#7dd3c2', fontSize: '0.75rem', margin: '0.5rem 0 0 0' }}>Manage your deposits, supplies, and borrows</p>
             </div>
             

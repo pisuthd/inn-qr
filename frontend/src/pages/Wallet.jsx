@@ -139,13 +139,17 @@ function Wallet() {
             <div className="card" style={{ marginBottom: '1rem' }}>
                 {/* Header row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <WalletIcon size={20} style={{ color: '#00e5c4' }} />
-                        <div>
-                            <h2 className="card-title" style={{ margin: 0, fontSize: '1.1rem' }}>Your Wallet</h2>
-                            <span style={{ color: '#7dd3c2', fontSize: '0.7rem' }}>{shortenAddress(initiaAddress)}</span>
-                        </div>
-                    </div>
+                    <h2 style={{ 
+                        fontSize: "1.25rem", 
+                        fontWeight: 700, 
+                        marginBottom: "0.25rem",
+                        fontFamily: "var(--font-orbitron)",
+                        color: "#ffffff"
+                    }}>
+                        <WalletIcon size={20} style={{ display: 'inline', marginRight: '8px', color: '#00e5c4' }} />
+                        Your Wallet
+                    </h2>
+                    {/* <span style={{ color: '#7dd3c2', fontSize: '0.7rem' }}>{shortenAddress(initiaAddress)}</span> */}
                     <button
                         onClick={refresh}
                         className="btn btn-secondary"
