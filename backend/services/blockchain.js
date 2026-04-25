@@ -3,6 +3,7 @@ import {
   RESTClient,
   MnemonicKey,
   MsgExecute,
+  MsgSend,
   bcs,
 } from '@initia/initia.js'
 
@@ -310,6 +311,21 @@ export function addressToHex(addr) {
   // Strip leading zeros for consistent comparison
   const stripped = hex.replace(/^0+/, '')
   return '0x' + (stripped || '0')
+}
+
+/**
+ * Send gas tokens from the admin account to a recipient
+ * Used by the faucet endpoint to fund new users
+ *
+ * @param {string} recipient - Bech32 address of the recipient
+ * @param {string} amount - Coin amount string (e.g. '100000000000000000WLINK')
+ * @returns {{ txHash: string }}
+ */
+export async function sendGas(recipient, amount = '100000000000000000WLINK') {
+  const msg = new MsgSend(adminKey.accAddress, recipient, amount)
+  const signedTx = await adminWallet.createAndSignTx({ msgs: [msg] })
+  const result = await restClient.tx.broadcast(signedTx)
+  return { txHash: result.txhash }
 }
 
 // Export REST client for use in server.js (health checks)

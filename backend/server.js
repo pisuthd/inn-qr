@@ -16,6 +16,7 @@ import {
   claimEscrow,
   registerOperator,
   addressToHex,
+  sendGas,
 } from './services/blockchain.js'
 
 const app = express()
@@ -38,6 +39,7 @@ app.get('/api', (req, res) => {
     endpoints: [
       'GET  /api/setup     — Health check & prerequisites',
       'POST /api/register  — Register operator on-chain (admin)',
+      'POST /api/faucet    — Get testnet gas tokens (0.1 WLINK)',
       'POST /api/match     — Quote & authorization check',
       'POST /api/confirm   — Create escrow on-chain',
       'POST /api/approve   — Claim escrow (settlement proof)',
@@ -507,6 +509,41 @@ app.get('/api/receipts/:userAddress', async (req, res) => {
 })
 
 // ============================================================================
+//  POST /api/faucet — Send testnet gas tokens to a user
+// ============================================================================
+
+app.post('/api/faucet', async (req, res) => {
+  try {
+    const { address } = req.body
+
+    // --- Validate address ---
+    if (!address) {
+      return res.status(400).json({ error: 'Missing required field: address' })
+    }
+
+    if (!address.startsWith('init1')) {
+      return res.status(400).json({ error: 'Invalid address. Must be a valid Initia bech32 address (starts with init1)' })
+    }
+
+    const amount = '100000000000000000WLINK' // 0.1 WLINK
+
+    console.log(`Faucet: sending ${amount} to ${address}`)
+    const result = await sendGas(address, amount)
+
+    res.json({
+      status: 'success',
+      message: `Sent 0.1 WLINK to ${address}`,
+      address,
+      amount,
+      txHash: result.txHash,
+    })
+  } catch (err) {
+    console.error('/api/faucet error:', err)
+    res.status(500).json({ error: 'Faucet request failed', details: err.message })
+  }
+})
+
+// ============================================================================
 //  Start server
 // ============================================================================
 
@@ -514,6 +551,7 @@ app.listen(PORT, () => {
   console.log(`🚀 WeaveLink Operator API running on http://localhost:${PORT}`)
   console.log(`📋 Operator address: ${getOperatorAddress()}`)
   console.log(`📡 Endpoints:`)
+  console.log(`   POST /api/faucet   — Get testnet gas tokens (0.1 WLINK)`)
   console.log(`   POST /api/match    — Quote & authorization check`)
   console.log(`   POST /api/confirm  — Create escrow on-chain`)
   console.log(`   POST /api/approve  — Claim escrow (settlement proof)`)
