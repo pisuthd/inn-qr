@@ -53,6 +53,8 @@ Spend yield from staked assets across Initia Interwoven via QR in local currency
 **1. Access the dapp**
 Open https://d3pgy5i52ev547.cloudfront.net in your browser. Connect using any Web3 wallet (Metamask, Rabby, etc.) -- InterwovenKit handles chain integration seamlessly.
 
+<img width="662" height="280" alt="Screenshot from 2026-04-25 23-43-30" src="https://github.com/user-attachments/assets/93b6a1ee-88ed-445d-b53a-240562a425e0" />
+
 **2. Get gas tokens**
 On the Home page, click the **"Get Testnet Gas"** button to receive 0.1 WLINK. This sends gas tokens to your connected wallet address so you can pay for on-chain transactions.
 
