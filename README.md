@@ -1,5 +1,7 @@
 # WeaveLink
 
+**WeaveLink** enables spending yield from staked assets across Initia Interwoven via QR in local currency across SEA, using HTLC escrow to ensure trustless settlement between operators and merchants. The system is built on isolated lending markets, allowing users to borrow against ibToken-based positions while maintaining capital efficiency.
+
 ## What WeaveLink Is
 
 Across Initia Interwoven, crypto holders earn yield from staking, lending, and LP positions -- sINIT at ~12%, Cabal iUSD at ~17%, various LP positions yielding 20%+ -- but that yield sits locked in positions across dozens of appchains. To spend it, you'd have to sell. Selling triggers taxable events, breaks compounding, and disrupts your strategy.
@@ -8,20 +10,13 @@ WeaveLink lets you spend your yield without selling. You keep your collateral. Y
 
 The flow is simple: scan a merchant QR code, the operator borrows USDC against your lending position, locks it in a Hash Time-Locked Contract (HTLC) escrow on-chain, settles the fiat payment off-chain, then cryptographically proves settlement to claim the USDC. If the operator fails, you get your USDC back. No trust required.
 
-```
-Traditional crypto spending          WeaveLink
----------------------------          ----------------------------
-Sell crypto -> taxable event  ->     Borrow against collateral (no sale)
-Use centralized exchange     ->      HTLC escrow (non-custodial)
-Wait for bank transfer       ->      Settled via national QR rails
-Trust the exchange           ->      Cryptographic proof (SHA3-256)
-```
+<img width="1187" height="548" alt="Screenshot from 2026-04-25 19-00-11" src="https://github.com/user-attachments/assets/cffbb63f-aec5-480b-a133-da2a9095e8ea" />
 
 ---
 
 ## Live Endpoints
 
-Our appchain is deployed on AWS EC2 with a reverse proxy, distributed via CloudFront with HTTPS. Anyone can interact with the live dapp and chain directly -- no local setup or custom client required.
+Our appchain is deployed on AWS EC2 with a reverse proxy, distributed via CloudFront with HTTPS. Anyone can interact with the live dapp and chain directly -- no local setup required.
 
 | Service | URL | Purpose |
 |---------|-----|---------|
@@ -89,137 +84,33 @@ Enter a memo. This memo is hashed on the client side, and the operator uses this
 **9. Verify and unlock**
 The operator settles the fiat payment off-chain (e.g., bank transfer to merchant). You review the payment slip and reveal the full memo. This cryptographic proof unlocks the escrow, transferring USDC to the operator. If the operator fails to settle within the timeout (typically ~30 minutes), you can manually trigger a refund to reclaim your USDC.
 
-When a user makes a payment, they're not actually spending their collateral -- instead, they borrow USDC from their own lending position. This borrowed USDC is locked in the HTLC escrow and released to the operator after off-chain settlement. The user then repays the borrowed USDC plus interest. This interest accrues to liquidity providers (LPs) who supply USDC to the markets, and incentivizes operators to act as LPs themselves to facilitate the off-chain settlement flow.
+When a user makes a payment, they're not actually spending their collateral -- instead, they borrow USDC from their own lending position. This borrowed USDC is locked in the HTLC escrow and released to the operator after off-chain settlement. 
+
+The user then repays the borrowed USDC plus interest. This interest accrues to liquidity providers (LPs) who supply USDC to the markets, and incentivizes operators to act as LPs themselves to facilitate the off-chain settlement flow.
 
 ---
+
+## System Overview
+
+<img width="742" height="620" alt="Screenshot from 2026-04-25 21-40-13" src="https://github.com/user-attachments/assets/6680c257-12c7-482e-ba19-3115bd2294d5" />
+
+WeaveLink is designed as a 3-layer system where all critical state and guarantees live on-chain, while execution and real-world settlement are handled by an operator layer. The architecture ensures that funds are never custodial and safety does not depend on trust.
+
+- **Smart Contracts (MoveVM)** -- `market.move` implements isolated lending markets where each market pairs a single loan token (USDC) with a single collateral token (ibToken), keeping risk fully contained per market. `operator.move` implements HTLC escrow: USDC is locked on-chain using a hash derived from the user’s memo, and can only be claimed with the correct secret or refunded after a 30-minute timeout. All financial guarantees — collateralization, health factor checks, delegated borrowing, escrow claim, and refund — are enforced entirely on-chain.
+- **Operator Backend (Node.js + Express)** -- A stateless service with no database and no custody of user funds. Handles FX quoting across Southeast Asian QR rails, constructs `create_withdrawal` transactions to borrow USDC on behalf of users and lock it into escrow, performs off-chain settlement, and submits `claim_escrow` once the secret is revealed.
+- **Frontend (React + InterwovenKit, Mobile-First)** -- A mobile-first interface designed to match real-world payment behavior, including QR scanning and streamlined flows. Integrates wallet, auto-signing sessions, and IBC bridging via `openBridge()`. With auto-signing, users approve once and subsequent transactions execute in the background without repeated wallet prompts.
+
+If the operator fails to complete settlement within the timeout window, the protocol allows users to reclaim their USDC directly from escrow — no operator involvement required. The system is safe by default, not by trust.
+
+Looking forward, the current mobile wallet experience is constrained by SDK support. Future iterations may integrate email-based onboarding (e.g., Privy) to provide a smoother, mobile-native user experience while maintaining the same underlying architecture.
 
 ## Architecture Overview
-
-WeaveLink is built from three tightly integrated layers:
-
-```
-+--------------------------------------------------------------+
-|                      weavelink-frontend                       |
-|                   React + Vite + InterwovenKit               |
-|                                                               |
-|  +---------------+  +---------------+  +------------------+  |
-|  |  ScanPay      |  |  Wallet       |  |  Receipts        |  |
-|  |  QR Scanner   |  |  Token Mgmt   |  |  Escrow Status   |  |
-|  |  Payment Flow |  |  Bridge       |  |  Claim / Refund  |  |
-|  +---------------+  +---------------+  +------------------+  |
-|                                                               |
-|  +---------------+  +---------------+  +------------------+  |
-|  |  Deposit      |  |  Borrow       |  |  Earn / Repay    |  |
-|  |  Supply       |  |  Withdraw     |  |  Market Actions  |  |
-|  +---------------+  +---------------+  +------------------+  |
-|                                                               |
-|       InterwovenKit -- auto-signing / bridge / wallet         |
-+----------------------------+----------------------------------+
-                             |  REST API
-+----------------------------v----------------------------------+
-|                    weavelink-backend                          |
-|                 Node.js + Express (Operator)                  |
-|                                                               |
-|  +---------------+  +---------------+  +------------------+  |
-|  | /api/match    |  | /api/confirm  |  | /api/approve     |  |
-|  | Quote + Auth  |  | Create Escrow |  | Claim Escrow     |  |
-|  | FX + Fee Calc |  | HTLC Secret   |  | Settlement Proof |  |
-|  +---------------+  +---------------+  +------------------+  |
-|                                                               |
-|  +---------------+  +---------------+                         |
-|  | fx.js         |  | blockchain.js |                         |
-|  | 5 QR Rails    |  | initia.js SDK |                         |
-|  | FX / Fees     |  | View + Execute|                         |
-|  +---------------+  +---------------+                         |
-+----------------------------+----------------------------------+
-                             |  MsgExecute / viewFunction
-+----------------------------v----------------------------------+
-|                  weavelink-contract (MoveVM)                  |
-|               Sovereign Minitia L2 -- weavelink-1             |
-|                                                               |
-|  +-------------+  +-------------+  +---------+  +---------+  |
-|  | market_v1   |  | operator    |  | oracle  |  | mocks   |  |
-|  |             |  |             |  |         |  |         |  |
-|  | Isolated    |  | HTLC Escrow |  | Price   |  | Test    |  |
-|  | Lending     |  | Registry    |  | Feeds   |  | Tokens  |  |
-|  | Supply      |  | Withdrawal  |  | 1e6     |  | Multi   |  |
-|  | Borrow      |  | Claim       |  | Prec.   |  | Asset   |  |
-|  | Collateral  |  | Refund      |  |         |  |         |  |
-|  +-------------+  +-------------+  +---------+  +---------+  |
-+----------------------------+----------------------------------+
-                             |  OPinit Optimistic Rollup
-+----------------------------v----------------------------------+
-|                 Initia L1 -- initiation-2                     |
-|      Security / Finality / Fraud Proofs / Shared Liquidity    |
-+--------------------------------------------------------------+
-```
-
----
 
 ## How It Works
 
 ### Payment Flow Lifecycle
 
-```
-User                      Frontend                  Backend                   Chain (weavelink-1)
-----                      -------                   -------                   -------------------
-  |                          |                         |                           |
-  |  Scan merchant QR        |                         |                           |
-  |------------------------->|                         |                           |
-  |                          |                         |                           |
-  |                          |  POST /api/match        |                           |
-  |                          |  (rail, amount, user)   |                           |
-  |                          |------------------------>|                           |
-  |                          |                         |  viewFunction:            |
-  |                          |                         |  is_authorized?           |
-  |                          |                         |  get_position             |
-  |                          |                         |  get_health_factor        |
-  |                          |                         |-------------------------->|
-  |                          |                         |<--------------------------|
-  |                          |                         |                           |
-  |                          |  operator + quote +     |                           |
-  |                          |  authorization status   |                           |
-  |                          |<------------------------|                           |
-  |                          |                         |                           |
-  |  [Authorize operator     |                         |                           |
-  |   if needed]             |                         |                           |
-  |------------------------->|                         |                           |
-  |                          |  MsgExecute:            |                           |
-  |                          |  set_authorization      |                           |
-  |                          |------------------------------------------------------->|
-  |                          |                         |                           |
-  |  Confirm payment         |                         |                           |
-  |------------------------->|                         |                           |
-  |                          |  POST /api/confirm      |                           |
-  |                          |  (memo, same params)    |                           |
-  |                          |------------------------>|                           |
-  |                          |                         |  MsgExecute:              |
-  |                          |                         |  create_withdrawal        |
-  |                          |                         |  (borrow + HTLC lock)     |
-  |                          |                         |-------------------------->|
-  |                          |                         |<--------------------------|
-  |                          |                         |                           |
-  |                          |  receipt + requestId    |                           |
-  |                          |  + escrow status        |                           |
-  |                          |<------------------------|                           |
-  |                          |                         |                           |
-  |  Receipt shown           |                         |                           |
-  |<-------------------------|                         |                           |
-  |                          |                         |                           |
-  |  ... operator settles off-chain (fiat transfer) ...   |                     |
-  |                          |                         |                           |
-  |  POST /api/approve       |                         |                           |
-  |  (requestId, memo)       |                         |                           |
-  |------------------------->|                         |                           |
-  |                          |------------------------>|                           |
-  |                          |                         |  MsgExecute:              |
-  |                          |                         |  claim_escrow(secret)     |
-  |                          |                         |-------------------------->|
-  |                          |                         |<--------------------------|
-  |                          |  settlement confirmed   |                           |
-  |                          |<------------------------|                           |
-  |<-------------------------|                         |                           |
-```
+<img width="1121" height="883" alt="Screenshot from 2026-04-25 21-47-36" src="https://github.com/user-attachments/assets/54be6670-b3a2-4a2b-947c-4745705d8a32" />
 
 ### HTLC Escrow Mechanics
 
@@ -240,7 +131,7 @@ The operator never holds user funds. USDC is locked in the protocol address (`@w
 
 ## Core Components
 
-### Move Contracts -- The Settlement Engine
+### Move Contracts
 
 Four Move modules running on weavelink-1 handle all financial logic:
 
@@ -271,20 +162,18 @@ Four Move modules running on weavelink-1 handle all financial logic:
 | `get_escrow(request_id)` | View escrow details |
 | `get_user_escrow_count(user)` | Count user escrows |
 
-**oracle.move** -- Admin-managed price feeds with 1e6 precision.
+**oracle.move** -- Admin-managed price feeds.
 
-**mock_tokens.move** -- Multi-token mock for testing (USDC, sINIT, LP, iUSD, Delta Neutral).
+**mock_tokens.move** -- Mock tokens for testing (USDC, sINIT, LP, Cabal iUSD, Cabal Delta Neutral).
 
-### Backend API -- The Operator Service
+### Backend API
 
 A stateless Express.js server that acts as the operator. No database -- all state lives on-chain. The server holds operator keys, constructs transactions, and broadcasts them via `@initia/initia.js`.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api` | GET | API info, operator address, supported rails |
-| `/api/setup` | GET | Health check: operator registration, funding status |
-| `/api/register` | POST | Register operator on-chain (one-time admin action) |
-| `/api/match` | POST | Quote + authorization check + matching delay |
+| `/api/match` | POST | Quote + authorization check + matching |
 | `/api/confirm` | POST | Create HTLC escrow on-chain, return receipt |
 | `/api/approve` | POST | Claim escrow with settlement proof |
 | `/api/receipts/:userAddress` | GET | List all escrow receipts for a user |
@@ -301,45 +190,6 @@ A stateless Express.js server that acts as the operator. No database -- all stat
 
 Fee: 0.5% on the USDC amount, applied at conversion time.
 
-### Frontend -- The User Interface
-
-React + Vite application with InterwovenKit for wallet, auto-signing, and IBC bridge:
-
-| Page | Description |
-|------|-------------|
-| Home | Portfolio overview, total yield, APY, quick actions |
-| ScanPay | QR scanner + manual entry, full payment flow (match -> authorize -> confirm) |
-| Wallet | Token balances grouped by source chain (Initia L1 / Cabal), bridge buttons |
-| Receipts | Escrow history, claim/refund actions, settlement status |
-| Deposit | Supply tokens to lending markets |
-| Borrow | Borrow USDC against collateral |
-| Repay | Repay outstanding debt |
-| Earn | View and enter yield strategies |
-| FAQ | Common questions |
-
-**Auto-Signing** -- InterwovenKit sessions enable background transaction signing. Users approve a single session grant, and all subsequent moves (authorize, borrow, escrow) execute without wallet popups.
-
-**Bridge** -- Native IBC bridge from Initia L1 and Cabal to weavelink-1, integrated directly in the Wallet page via InterwovenKit's `openBridge()`.
-
----
-
-## Feature Set
-
-| Feature | Description |
-|---------|-------------|
-| Isolated Lending Markets | Each market is independent with unique token pairs. Inspired by Morpho Blue. |
-| HTLC Escrow Settlement | Operator cannot access USDC until settlement is cryptographically proven (SHA3-256 double-hash). |
-| 5 National QR Rails | PromptPay (THB), VietQR (VND), DuitNow (MYR), QRIS (IDR), PayNow (SGD). |
-| Operator-Mediated Withdrawals | Operators borrow on behalf of users, settle fiat off-chain, prove on-chain. |
-| Timeout Safety | 30-minute escrow timeout. User reclaims USDC if operator fails to settle. |
-| Health Factor Guards | All borrows checked against collateral ratio. Liquidation for unhealthy positions. |
-| Stateless Backend | No database. All state on-chain. Operator keys + initia.js SDK only. |
-| Enshrined Auto-Signing | One session approval via InterwovenKit. Scoped, time-limited, revocable. |
-| Interwoven Bridge | Bridge assets from Initia L1 and Cabal directly within the frontend. |
-| FX Conversion | Real-time local-to-USDC conversion with 0.5% fee across 5 currencies. |
-| Jump Rate Interest | Per-second interest accrual with kink-based rate model. |
-| Full Test Coverage | 98 Move tests covering market, auth, interest, liquidation, and operator flows. |
-
 ---
 
 ## Repository Structure
@@ -347,60 +197,24 @@ React + Vite application with InterwovenKit for wallet, auto-signing, and IBC br
 ```
 weavelink/
 ├── contracts/
-│   ├── Move.toml
-│   └── sources/
-│       ├── market_v1.move              # Isolated lending with supply/borrow/collateral/liquidation
-│       ├── oracle.move                 # Admin-managed price feeds (1e6 precision)
-│       ├── operator.move               # Operator registry + HTLC escrow
-│       ├── mocks/
-│       │   └── mock_tokens.move        # Multi-token mock (USDC, sINIT, LP, iUSD, DNIUSD)
-│       └── tests/
-│           ├── test_market.move        # Market CRUD, supply, withdraw, borrow, repay (18 tests)
-│           ├── test_authorization.move # Delegate auth, on-behalf operations (9 tests)
-│           ├── test_interest.move      # Rate calculations, kink model (7 tests)
-│           ├── test_liquidation.move   # Full/partial liquidation, health (7 tests)
-│           └── test_operator.move      # HTLC escrow, claim, refund, timeouts (37 tests)
+│   ├── market_v1.move      # Isolated lending markets (supply, borrow, collateral)
+│   ├── operator.move       # HTLC escrow + operator-mediated withdrawals
+│   └── oracle.move         # Price feeds (1e6 precision)
 │
 ├── backend/
-│   ├── package.json
-│   ├── server.js                       # Express API: match, confirm, approve, receipts
+│   ├── server.js           # Operator API (match, confirm, approve)
 │   └── services/
-│       ├── blockchain.js               # initia.js SDK: view functions, MsgExecute, wallets
-│       └── fx.js                       # FX rates, fee calculation, HTLC secret derivation
+│       ├── blockchain.js   # initia.js SDK integration
+│       └── fx.js           # FX rates + fee logic
 │
 ├── frontend/
-│   ├── package.json
-│   ├── vite.config.js
 │   └── src/
-│       ├── App.jsx                     # Route definitions
-│       ├── config.js                   # Chain config, tokens, InterwovenKit setup
-│       ├── main.jsx
-│       ├── index.css
-│       ├── components/
-│       │   ├── BottomNav.jsx           # Tab navigation
-│       │   ├── Header.jsx              # App header
-│       │   └── Modal.jsx               # Reusable modal wrapper
-│       ├── contexts/
-│       │   └── SettingsContext.jsx      # Country/currency selection
-│       └── pages/
-│           ├── Home.jsx                # Portfolio overview, yield display
-│           ├── ScanPay.jsx             # QR scan + payment flow (match/auth/confirm)
-│           ├── Wallet.jsx              # Token balances, bridge buttons
-│           ├── Receipts.jsx            # Escrow history, claim/refund
-│           ├── Deposit.jsx             # Supply to markets
-│           ├── Borrow.jsx              # Borrow against collateral
-│           ├── Repay.jsx               # Repay debt
-│           ├── Earn.jsx                # Yield strategies
-│           ├── Dashboard.jsx           # Analytics
-│           ├── Portfolio.jsx           # Position details
-│           ├── Withdraw.jsx            # Withdraw from markets
-│           └── Faq.jsx                 # FAQ page
+│       ├── pages/ScanPay.jsx   # QR payment flow (core feature)
+│       ├── pages/Wallet.jsx    # Balances + bridge
+│       └── pages/Receipts.jsx  # Escrow tracking (claim/refund)
 │
 └── scripts/
-    ├── package.json
-    ├── faucet.js                       # Mint test tokens to any address
-    ├── check-balance.js                # Query on-chain balances
-    └── admin-balance.js                # Admin utility
+    └── faucet.js           # Mint gas tokens
 ```
 
 ---
@@ -408,81 +222,18 @@ weavelink/
 ## Tech Stack
 
 | Layer | Technology | Role |
-|-------|-----------|------|
-| Smart Contracts | Move (MoveVM) | Lending markets, HTLC escrow, oracle, operator registry |
-| L2 Rollup | Initia OPinit Stack | Sovereign appchain weavelink-1, fraud proofs |
-| L1 Security | Initia initiation-2 | Finality, shared liquidity, settlement |
-| Backend | Node.js + Express | Operator API: matching, escrow creation, settlement |
-| JS SDK | @initia/initia.js | Transaction construction, signing, broadcast, view functions |
-| Frontend | React + Vite | UI, payment flow, wallet management |
-| Wallet & Sessions | @initia/interwovenkit-react | Auto-signing, IBC bridge, wallet connection |
-| Cross-chain | IBC + OPinit | L1 to L2 asset movement |
-| Crypto | SHA3-256 (double-hash) | HTLC secret/hash for trustless escrow |
+|------|------------|------|
+| Smart Contracts | Move (MoveVM) | Isolated lending markets + HTLC escrow + operator module |
+| Appchain (L2) | Initia OPinit | Sovereign rollup (weavelink-1) with execution and settlement |
+| L1 Security | Initia Testnet (initiation-2) | Finality, shared liquidity, fraud proofs |
+| Backend | Node.js + Express | Stateless operator (match, borrow, escrow, settlement) |
+| SDK | @initia/initia.js | Transaction building, signing, chain interaction |
+| Frontend | React + Vite | Mobile-first UI, QR payment flow |
+| Wallet & Sessions | @initia/interwovenkit-react | Auto-signing sessions + integrated IBC bridge |
+| Cross-chain | IBC + OPinit | Asset movement between L1 and appchain |
+| Crypto | SHA3-256 (double-hash) | HTLC secret derivation and verification |
 
 ---
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- npm
-
-### 1. Start the backend
-
-```bash
-cd backend
-npm install
-node server.js
-```
-
-The server starts on `http://localhost:3001`. On first run, check operator status:
-
-```bash
-curl http://localhost:3001/api/setup
-```
-
-If the operator is not registered, register it:
-
-```bash
-curl -X POST http://localhost:3001/api/register
-```
-
-### 2. Start the frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open the URL shown in terminal (typically `http://localhost:5173`).
-
-### 3. Get test tokens
-
-```bash
-cd scripts
-npm install
-node faucet.js YOUR_INIT_ADDRESS
-```
-
-This mints USDC, sINIT, LP, iUSD, and Delta Neutral INIT tokens to your address.
-
-### 4. Make a payment
-
-1. Open the frontend, connect your wallet
-2. Deposit collateral and supply USDC in a market
-3. Tap "Scan" to open the payment flow
-4. Enter merchant details (or scan QR), amount, and memo
-5. The system matches an operator, shows a quote
-6. Authorize the operator (one-time on-chain transaction)
-7. Confirm -- USDC is locked in HTLC escrow
-8. Operator settles fiat payment off-chain
-9. Approve -- operator proves settlement, claims USDC
-
----
-
-
 
 ## Backend API Reference
 
@@ -580,23 +331,6 @@ Claim escrow after off-chain settlement. Reveals the HTLC secret to prove the op
 }
 ```
 
-### GET /api/receipts/:userAddress
-
-List all escrow receipts for a user.
-
-**Response:**
-
-```json
-{
-  "receipts": [
-    { "requestId": 1, "amount": 2870000, "status": "claimed", "destinationType": 0 },
-    { "requestId": 2, "amount": 1500000, "status": "locked", "destinationType": 0 }
-  ]
-}
-```
-
----
-
 ## Contract Module Reference
 
 ### Interest Rate Model (market_v1.move)
@@ -634,15 +368,6 @@ health_factor = (collateral * collateral_price * lltv / 100) * 100 / (borrowed *
 | Fiat | 0 | Bank transfer / QR payment |
 | Cross-chain | 1 | Bridge transfer |
 
-## System Overview
-
-WeaveLink combines on-chain financial primitives, a stateless operator service, and a mobile-first frontend. All critical state stays on-chain while execution and real-world settlement are delegated to the off-chain operator layer.
-
-- **Smart Contracts (MoveVM on weavelink-1)** -- Implements isolated lending markets and HTLC escrow. Handles collateral, borrowing, authorization, escrow locking, claim, and refund logic -- all financial guarantees enforced on-chain.
-- **Operator Backend (Node.js + Express)** -- Stateless service for payment matching, FX calculation, and transaction execution. Borrows USDC on behalf of users, locks in HTLC escrow, performs off-chain settlement, and completes the flow by submitting the secret for on-chain claim.
-- **Frontend (React + InterwovenKit, Mobile-First)** -- Mobile-first payment interface with QR scanning, integrated wallet, auto-signing sessions, and bridge access.
-
-Future improvements may include Privy integration for better mobile onboarding. The current wallet experience is limited by SDK support on mobile environments.
 
 ## Conclusion
 
