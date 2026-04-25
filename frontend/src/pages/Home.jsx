@@ -12,12 +12,16 @@ import {
   RefreshCw,
   PiggyBank,
   NotebookPen,
-  Undo2
+  Undo2,
+  Droplets,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   CHAIN_ID,
   MODULE_ADDRESS,
   REST_URL,
+  API_URL,
   TOKENS,
 } from "../config.js";
 
@@ -56,6 +60,10 @@ function Home({ onNavigate, onOpenModal }) {
   const [totalYield, setTotalYield] = useState(0);
   const [weightedApy, setWeightedApy] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // Faucet state
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetResult, setFaucetResult] = useState(null); // { type: 'success' | 'error', message: string, txHash?: string }
 
   const isAutoSignEnabled = !!autoSign?.isEnabledByChain?.[CHAIN_ID];
 
@@ -114,6 +122,29 @@ function Home({ onNavigate, onOpenModal }) {
       loadPortfolio();
     }
   }, [initiaAddress, loadPortfolio]);
+
+  const handleFaucet = async () => {
+    if (!initiaAddress || faucetLoading) return;
+    setFaucetLoading(true);
+    setFaucetResult(null);
+    try {
+      const res = await fetch(`${API_URL}/api/faucet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: initiaAddress }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFaucetResult({ type: 'error', message: data.error || 'Faucet request failed' });
+      } else {
+        setFaucetResult({ type: 'success', message: data.message, txHash: data.txHash });
+      }
+    } catch (err) {
+      setFaucetResult({ type: 'error', message: 'Network error. Please try again.' });
+    } finally {
+      setFaucetLoading(false);
+    }
+  };
 
   const handleMenuClick = (id) => {
     if (id === 'scan') {
@@ -292,35 +323,87 @@ function Home({ onNavigate, onOpenModal }) {
       )}
 
 
-      {/* CTA */}
+      {/* Faucet */}
       <div className="card" style={{ textAlign: 'center' }}>
-        <h3 className="card-title">Ready to begin?</h3>
-        <p style={{ color: '#b8f5e3', marginBottom: '0.75rem' }}>
-          Get your gas to get started on WeaveLink. Clone the repo and run:
-        </p>
-        <div style={{ 
-          background: '#0d0d0d', 
-          border: '1px solid rgba(0, 229, 196, 0.2)', 
-          borderRadius: '8px', 
-          padding: '1rem', 
-          textAlign: 'left',
-          marginBottom: '0.5rem',
-          fontFamily: 'monospace',
-          fontSize: '0.8rem'
-        }}>
-          <div style={{ color: '#7dd3c2' }}>$ git clone https://github.com/pisuthd/weavelink</div>
-          <div style={{ color: '#7dd3c2' }}>$ cd scripts</div>
-          <div style={{ color: '#7dd3c2' }}>$ npm install</div>
-          <div style={{ color: '#f97316' }}>$ node faucet.js YOUR_ADDRESS</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <Droplets size={20} style={{ color: '#00e5c4' }} />
+          <h3 className="card-title" style={{ marginBottom: 0 }}>Get Testnet Gas</h3>
         </div>
-        <a 
-          href="https://github.com/pisuthd/weavelink" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          style={{ color: '#00e5c4', fontSize: '0.75rem', textDecoration: 'underline' }}
-        >
-          View on GitHub →
-        </a>
+        <p style={{ color: '#b8f5e3', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+          Receive <strong style={{ color: '#00e5c4' }}>0.1 WLINK</strong> to pay for transactions on WeaveLink testnet.
+        </p>
+
+        {!initiaAddress ? (
+          <button onClick={openConnect} className="btn btn-primary" style={{ width: '100%' }}>
+            Connect Wallet to Get Gas
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={handleFaucet}
+              disabled={faucetLoading}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                opacity: faucetLoading ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              {faucetLoading ? (
+                <>
+                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Droplets size={16} />
+                  Get 0.1 WLINK
+                </>
+              )}
+            </button>
+            <p style={{ color: '#7dd3c2', fontSize: '0.7rem', marginTop: '0.5rem', marginBottom: 0 }}>
+              to {shortenAddress(initiaAddress)}
+            </p>
+          </>
+        )}
+
+        {faucetResult && (
+          <div style={{
+            marginTop: '0.75rem',
+            padding: '0.75rem',
+            borderRadius: '8px',
+            background: faucetResult.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            border: `1px solid ${faucetResult.type === 'success' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            textAlign: 'left',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: faucetResult.txHash ? '0.5rem' : 0 }}>
+              {faucetResult.type === 'success' ? (
+                <CheckCircle2 size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
+              ) : (
+                <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
+              )}
+              <span style={{
+                color: faucetResult.type === 'success' ? '#22c55e' : '#ef4444',
+                fontSize: '0.8rem',
+              }}>
+                {faucetResult.type === 'success' ? 'Transaction sent!' : faucetResult.message}
+              </span>
+            </div>
+            {faucetResult.txHash && (
+              <a
+                href={`${REST_URL.replace('/rest', '')}/explorer/tx/${faucetResult.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#00e5c4', fontSize: '0.7rem', textDecoration: 'underline', wordBreak: 'break-all' }}
+              >
+                View tx: {faucetResult.txHash.slice(0, 20)}...
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

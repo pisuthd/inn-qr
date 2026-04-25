@@ -24,7 +24,6 @@ Our appchain is deployed on AWS EC2 with a reverse proxy, distributed via CloudF
 | Rollup RPC | `https://d3pgy5i52ev547.cloudfront.net/rpc` | Transaction broadcast, block queries |
 | Rollup REST | `https://d3pgy5i52ev547.cloudfront.net/rest` | REST API, contract view functions |
 | Operator API | `https://weavelink-one.vercel.app/api` | Match, confirm, approve endpoints |
-| Faucet Script | `scripts/faucet.js` | For mint gas tokens |
 
 ---
 
@@ -55,13 +54,7 @@ Spend yield from staked assets across Initia Interwoven via QR in local currency
 Open https://d3pgy5i52ev547.cloudfront.net in your browser. Connect using any Web3 wallet (Metamask, Rabby, etc.) -- InterwovenKit handles chain integration seamlessly.
 
 **2. Get gas tokens**
-Clone the repo, then run:
-```bash
-cd scripts
-npm install
-node faucet.js YOUR_ADDRESS
-```
-This mints gas tokens to your address so you can pay for on-chain transactions.
+On the Home page, click the **"Get Testnet Gas"** button to receive 0.1 WLINK. This sends gas tokens to your connected wallet address so you can pay for on-chain transactions.
 
 **3. Get mock tokens**
 Navigate to the Wallet page and mint mock interest-bearing tokens (sINIT, LP, iUSD). These simulate yield from staking and LP positions across Initia Interwoven.
@@ -173,6 +166,7 @@ A stateless Express.js server that acts as the operator. No database -- all stat
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api` | GET | API info, operator address, supported rails |
+| `/api/faucet` | POST | Get testnet gas tokens (0.1 WLINK) |
 | `/api/match` | POST | Quote + authorization check + matching |
 | `/api/confirm` | POST | Create HTLC escrow on-chain, return receipt |
 | `/api/approve` | POST | Claim escrow with settlement proof |
