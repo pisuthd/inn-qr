@@ -69,18 +69,35 @@ export function getRailInfo(rail) {
 }
 
 /**
- * Compute deterministic HTLC secret for a withdrawal
- * secret = sha3-256(SEED + userAddress + amount + marketId)
+ * Compute HTLC secret from user-provided memo
+ * secret = sha3-256(memo)
  * secretHash = sha3-256(secret)
  *
- * This allows the backend to reconstruct the secret at any time
- * without storing any state.
+ * The memo is stored in-memory so the secret can be reconstructed for claim_escrow.
  */
-export function computeSecret(seed, userAddress, amount, marketId) {
-  const preimage = `${seed}:${userAddress}:${amount}:${marketId}`
-  const secret = createHash('sha3-256').update(preimage).digest()
+export function computeSecretFromMemo(memo) {
+  const secret = createHash('sha3-256').update(memo).digest()
   const secretHash = createHash('sha3-256').update(secret).digest()
   return { secret, secretHash }
+}
+
+/**
+ * Validate memo: alphanumeric, no whitespace, 4-8 chars
+ */
+export function validateMemo(memo) {
+  if (!memo || typeof memo !== 'string') {
+    return { valid: false, error: 'Memo is required' }
+  }
+  if (!/^[a-zA-Z0-9]+$/.test(memo)) {
+    return { valid: false, error: 'Memo must be alphanumeric (no spaces or special chars)' }
+  }
+  if (memo.length < 4) {
+    return { valid: false, error: 'Memo must be at least 4 characters' }
+  }
+  if (memo.length > 8) {
+    return { valid: false, error: 'Memo must be at most 8 characters' }
+  }
+  return { valid: true }
 }
 
 /**

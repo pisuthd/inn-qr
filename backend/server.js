@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { validateRail, localToUsdc, computeSecret, getSupportedRails } from './services/fx.js'
+import { validateRail, localToUsdc, computeSecretFromMemo, validateMemo, getSupportedRails } from './services/fx.js'
 import {
   restClient,
   getOperatorAddress,
@@ -20,9 +20,6 @@ import {
 
 const app = express()
 const PORT = 3001
-
-// Operator seed for deterministic HTLC secrets (server-side secret)
-const OPERATOR_SEED = 'weavelink-htlc-seed-v1'
 
 app.use(cors())
 app.use(express.json())
@@ -278,14 +275,20 @@ app.post('/api/match', async (req, res) => {
 
 app.post('/api/confirm', async (req, res) => {
   try {
-    const { userAddress, rail, proxyType, proxyValue, currency, amount, marketId } = req.body
+    const { userAddress, rail, proxyType, proxyValue, currency, amount, marketId, memo } = req.body
 
     // --- Validate required fields ---
     if (!userAddress || !rail || !proxyType || !proxyValue || !currency || !amount || !marketId) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['userAddress', 'rail', 'proxyType', 'proxyValue', 'currency', 'amount', 'marketId'],
+        required: ['userAddress', 'rail', 'proxyType', 'proxyValue', 'currency', 'amount', 'marketId', 'memo'],
       })
+    }
+
+    // --- Validate memo ---
+    const memoCheck = validateMemo(memo)
+    if (!memoCheck.valid) {
+      return res.status(400).json({ error: memoCheck.error })
     }
 
     // --- Validate rail/currency ---
@@ -327,13 +330,14 @@ app.post('/api/confirm', async (req, res) => {
       })
     }
 
-    // --- Compute deterministic HTLC secret ---
-    // Normalize user address to hex for consistent secret computation
-    const userAddressHex = addressToHex(userAddress)
-    const { secret, secretHash } = computeSecret(OPERATOR_SEED, userAddressHex, usdcAmount, marketIdNum)
+    // --- Compute HTLC secret from user-provided memo ---
+    const { secret, secretHash } = computeSecretFromMemo(memo)
+    const memoHash = secretHash.toString('hex')
 
     // --- Execute create_withdrawal on-chain ---
     const result = await createWithdrawal(userAddress, marketIdNum, usdcAmount, secretHash)
+
+    console.log(`Confirm: escrow created for request ${result.requestId}, memoHash=${memoHash}`)
 
     // --- Return receipt ---
     res.json({
@@ -342,6 +346,7 @@ app.post('/api/confirm', async (req, res) => {
       txHash: result.txHash,
       timeoutAt: result.timeoutAt,
       timeoutMinutes: 30,
+      memoHash,
       receipt: {
         requestId: result.requestId,
         userAddress,
@@ -372,7 +377,7 @@ app.post('/api/confirm', async (req, res) => {
 
 app.post('/api/approve', async (req, res) => {
   try {
-    const { requestId, userAddress, amount, marketId } = req.body
+    const { requestId, memo } = req.body
 
     // --- Validate required fields ---
     if (!requestId) {
@@ -401,16 +406,20 @@ app.post('/api/approve', async (req, res) => {
       })
     }
 
-    // --- Reconstruct deterministic secret ---
-    // Use the on-chain escrow data to reconstruct
-    const escrowAmount = escrow.amount
-    // Normalize to hex for consistent secret computation (same as /confirm)
-    const escrowUserHex = addressToHex(escrow.user)
-    // We need marketId - try from request body or from escrow if available
-    const escrowMarketId = Number(marketId) || 1 // fallback to 1 if not provided
+    // --- Require memo from client (stateless) ---
+    if (!memo) {
+      return res.status(400).json({
+        error: 'Memo is required. Provide the same memo used during /confirm.',
+      })
+    }
 
-    console.log(`Approve: reconstructing secret for request ${requestIdNum}, user=${escrowUserHex}, amount=${escrowAmount}, marketId=${escrowMarketId}`)
-    const { secret } = computeSecret(OPERATOR_SEED, escrowUserHex, escrowAmount, escrowMarketId)
+    const memoCheck = validateMemo(memo)
+    if (!memoCheck.valid) {
+      return res.status(400).json({ error: memoCheck.error })
+    }
+
+    console.log(`Approve: reconstructing secret for request ${requestIdNum}, memo="${memo}"`)
+    const { secret } = computeSecretFromMemo(memo)
 
     // --- Execute claim_escrow on-chain ---
     const result = await claimEscrow(requestIdNum, secret)
