@@ -41,12 +41,10 @@ async function fetchInventory(address) {
   }
 }
 
-function Dashboard() {
-  const { initiaAddress, requestTxSync, autoSign } = useInterwovenKit();
+function Dashboard({ onOpenModal }) {
+  const { initiaAddress, requestTxSync } = useInterwovenKit();
   const [inventory, setInventory] = useState({ shards: 0, relics: 0 });
   const [loading, setLoading] = useState(false);
-
-  const isAutoSignEnabled = !!autoSign?.isEnabledByChain?.[CHAIN_ID];
 
   const refresh = useCallback(async () => {
     if (!initiaAddress) return;
@@ -59,21 +57,6 @@ function Dashboard() {
     const interval = setInterval(refresh, 5000);
     return () => clearInterval(interval);
   }, [refresh]);
-
-  const toggleAutoSign = async () => {
-    if (!autoSign) return;
-    try {
-      if (isAutoSignEnabled) {
-        await autoSign.disable(CHAIN_ID);
-      } else {
-        await autoSign.enable(CHAIN_ID, {
-          permissions: ["/initia.move.v1.MsgExecute"],
-        });
-      }
-    } catch (err) {
-      console.error("Auto-sign toggle failed:", err);
-    }
-  };
 
   const shortenAddress = (addr) => {
     if (!addr) return "";
@@ -122,10 +105,7 @@ function Dashboard() {
         <button 
           className="btn btn-primary" 
           style={{ width: '100%' }}
-          onClick={() => {
-            // Open camera for QR scanning
-            alert('QR Scanner coming soon!');
-          }}
+          onClick={() => onOpenModal?.('pay')}
         >
           <QrCode size={18} />
           Scan QR Code
@@ -197,33 +177,6 @@ function Dashboard() {
           </button>
         </div>
       </div>
-
-      {/* Auto-sign toggle */}
-      {initiaAddress && (
-        <div className="card" style={{ textAlign: "center" }}>
-          <button
-            className="btn btn-secondary"
-            onClick={toggleAutoSign}
-            style={{
-              fontSize: "0.75rem",
-              gap: "0.5rem",
-            }}
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                backgroundColor: isAutoSignEnabled ? "#22c55e" : "#6b7280",
-              }}
-            />
-            {isAutoSignEnabled ? "AUTO-SIGN ON" : "AUTO-SIGN OFF"}
-          </button>
-          <p style={{ color: '#7dd3c2', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-            Enable to approve transactions automatically
-          </p>
-        </div>
-      )}
 
       {/* Quick Guide */}
       <div className="card">

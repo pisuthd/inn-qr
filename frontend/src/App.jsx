@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useInterwovenKit } from "@initia/interwovenkit-react";
+import React, { useState } from "react"; 
 import { SettingsProvider } from "./contexts/SettingsContext.jsx";
 import Header from "./components/Header.jsx";
 import BottomNav from "./components/BottomNav.jsx";
@@ -11,18 +10,12 @@ import Earn from "./pages/Earn.jsx";
 import Deposit from "./pages/Deposit.jsx";
 import Borrow from "./pages/Borrow.jsx";
 import Repay from "./pages/Repay.jsx";
-import { Wallet as WalletIcon, Users, Globe, Trophy, ChevronRight } from 'lucide-react';
-
+import ScanPay from "./pages/ScanPay.jsx"; 
+import Receipts from "./pages/Receipts.jsx";
 
 function App() {
   const [activeTab, setActiveTab] = useState('home');
-  const [activeModal, setActiveModal] = useState(null);
-  const { initiaAddress, openConnect, openWallet } = useInterwovenKit();
-
-  const shortenAddress = (addr) => {
-    if (!addr) return "";
-    return `${addr.slice(0, 8)}...${addr.slice(-4)}`;
-  };
+  const [activeModal, setActiveModal] = useState(null); 
 
   const handleNavigate = (tab) => {
     setActiveTab(tab);
@@ -34,21 +27,7 @@ function App() {
       case 'wallet':
         return <Wallet />;
       case 'inventory':
-        return <Dashboard />;
-      case 'leaderboard':
-        return (
-          <div className="fade-in">
-            <div className="card" style={{ textAlign: 'center' }}>
-              <h2 className="card-title">
-                <Users size={20} style={{ display: 'inline', marginRight: '8px', color: '#00e5c4' }} />
-                Partner List
-              </h2>
-              <p style={{ color: '#b8f5e3' }}>
-                Coming soon! Partner list will be displayed here.
-              </p>
-            </div>
-          </div>
-        );
+        return <Dashboard onOpenModal={setActiveModal} />;
       case 'portfolio':
         return <Portfolio />;
       case 'home':
@@ -73,6 +52,8 @@ function App() {
       {activeModal === 'deposit' && <Deposit isOpen={true} onClose={() => setActiveModal(null)} />}
       {activeModal === 'borrow' && <Borrow isOpen={true} onClose={() => setActiveModal(null)} />}
       {activeModal === 'repay' && <Repay isOpen={true} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'pay' && <ScanPay isOpen={true} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'receipts' && <Receipts isOpen={true} onClose={() => setActiveModal(null)} />}
     </SettingsProvider>
   );
 }

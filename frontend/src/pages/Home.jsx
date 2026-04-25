@@ -51,11 +51,28 @@ async function fetchBalance(address, tokenId) {
 }
 
 function Home({ onNavigate, onOpenModal }) {
-  const { initiaAddress, openConnect, openWallet } = useInterwovenKit();
+  const { initiaAddress, openConnect, openWallet, autoSign } = useInterwovenKit();
   const { selectedCountry } = useSettings();
   const [totalYield, setTotalYield] = useState(0);
   const [weightedApy, setWeightedApy] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  const isAutoSignEnabled = !!autoSign?.isEnabledByChain?.[CHAIN_ID];
+
+  const toggleAutoSign = async () => {
+    if (!autoSign) return;
+    try {
+      if (isAutoSignEnabled) {
+        await autoSign.disable(CHAIN_ID);
+      } else {
+        await autoSign.enable(CHAIN_ID, {
+          permissions: ["/initia.move.v1.MsgExecute"],
+        });
+      }
+    } catch (err) {
+      console.error("Auto-sign toggle failed:", err);
+    }
+  };
 
   const shortenAddress = (addr) => {
     if (!addr) return "";
@@ -99,7 +116,9 @@ function Home({ onNavigate, onOpenModal }) {
   }, [initiaAddress, loadPortfolio]);
 
   const handleMenuClick = (id) => {
-    if (id === 'earn') {
+    if (id === 'scan') {
+      onOpenModal('pay');
+    } else if (id === 'earn') {
       onOpenModal('earn');
     } else if (id === 'deposit') {
       onOpenModal('deposit');
@@ -107,6 +126,8 @@ function Home({ onNavigate, onOpenModal }) {
       onOpenModal('borrow');
     } else if (id === 'repay') {
       onOpenModal('repay');
+    } else if (id === 'receipts') {
+      onOpenModal('receipts');
     } else {
       onNavigate(id);
     }
@@ -162,6 +183,44 @@ function Home({ onNavigate, onOpenModal }) {
 
         </div>
       </div> 
+
+      {/* Auto-Sign Toggle */}
+      {initiaAddress && (
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 className="card-title" style={{ marginBottom: '0.25rem' }}>Auto-Sign</h3>
+            <p style={{ color: '#7dd3c2', fontSize: '0.75rem', margin: 0 }}>
+              {isAutoSignEnabled ? 'Operator can borrow on your behalf' : 'Enable to let operator settle payments'}
+            </p>
+          </div>
+          <button
+            onClick={toggleAutoSign}
+            style={{
+              width: '48px',
+              height: '28px',
+              borderRadius: '14px',
+              border: 'none',
+              background: isAutoSignEnabled ? '#00e5c4' : 'rgba(255,255,255,0.15)',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'background 0.2s',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              background: '#ffffff',
+              position: 'absolute',
+              top: '3px',
+              left: isAutoSignEnabled ? '23px' : '3px',
+              transition: 'left 0.2s',
+            }} />
+          </button>
+        </div>
+      )}
+
       {/* Menu Grid */}
       <div className="menu-grid">
         {menuItems.map((item) => (

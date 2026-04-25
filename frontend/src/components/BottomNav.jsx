@@ -1,11 +1,10 @@
-import { Home, Package, Users, User, Wallet } from 'lucide-react';
+import { Home, QrCode, Users, User, Wallet } from 'lucide-react';
 
 function BottomNav({ activeTab, onTabChange }) {
   const tabs = [
     { id: 'home', label: 'HOME', Icon: Home },
     { id: 'wallet', label: 'WALLET', Icon: Wallet },
-    { id: 'inventory', label: 'PAY', Icon: Package },
-    // { id: 'leaderboard', label: 'PARTNERS', Icon: Users },
+    { id: 'inventory', label: 'PAY', Icon: QrCode }, 
     { id: 'portfolio', label: 'PORTFOLIO', Icon: User },
   ];
 
