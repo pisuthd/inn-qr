@@ -634,6 +634,22 @@ health_factor = (collateral * collateral_price * lltv / 100) * 100 / (borrowed *
 | Fiat | 0 | Bank transfer / QR payment |
 | Cross-chain | 1 | Bridge transfer |
 
+## System Overview
+
+WeaveLink combines on-chain financial primitives, a stateless operator service, and a mobile-first frontend. All critical state stays on-chain while execution and real-world settlement are delegated to the off-chain operator layer.
+
+- **Smart Contracts (MoveVM on weavelink-1)** -- Implements isolated lending markets and HTLC escrow. Handles collateral, borrowing, authorization, escrow locking, claim, and refund logic -- all financial guarantees enforced on-chain.
+- **Operator Backend (Node.js + Express)** -- Stateless service for payment matching, FX calculation, and transaction execution. Borrows USDC on behalf of users, locks in HTLC escrow, performs off-chain settlement, and completes the flow by submitting the secret for on-chain claim.
+- **Frontend (React + InterwovenKit, Mobile-First)** -- Mobile-first payment interface with QR scanning, integrated wallet, auto-signing sessions, and bridge access.
+
+Future improvements may include Privy integration for better mobile onboarding. The current wallet experience is limited by SDK support on mobile environments.
+
+## Conclusion
+
+WeaveLink bridges DeFi yield and real-world spending by turning passive on-chain positions into active payment rails. By combining isolated lending markets with HTLC-secured operator settlement, the system removes the need to sell assets, preserving capital efficiency while enabling everyday usability.
+
+Built on Initia Interwoven, WeaveLink demonstrates how sovereign appchains can tightly integrate financial primitives and user experience. The result is a trustless, composable system where yield becomes liquid in the real world -- unlocking a new category of crypto-native payments.
+
 ## License
 
 MIT
