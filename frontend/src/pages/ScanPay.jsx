@@ -4,18 +4,18 @@ import { useSettings } from "../contexts/SettingsContext.jsx";
 import { RESTClient, bcs } from "@initia/initia.js";
 import { MsgExecute } from "@initia/initia.proto/initia/move/v1/tx";
 import {
-  QrCode, RefreshCw, CheckCircle, AlertTriangle, Camera, Shield, User, MapPin, Keyboard
+  RefreshCw, CheckCircle, Camera, User, MapPin, Keyboard
 } from 'lucide-react';
 import Modal from "../components/Modal.jsx";
 import { API_URL, CHAIN_ID, MODULE_ADDRESS, REST_URL, FEE_DENOM } from "../config.js";
 
-const rest = new RESTClient(REST_URL, { chainId: CHAIN_ID });
+// const rest = new RESTClient(REST_URL, { chainId: CHAIN_ID });
 
-const PROXY_TYPES = [
-  { value: "phone", label: "Phone Number" },
-  { value: "national_id", label: "National ID" },
-  { value: "business_id", label: "Business ID" },
-];
+// const PROXY_TYPES = [
+//   { value: "phone", label: "Phone Number" },
+//   { value: "national_id", label: "National ID" },
+//   { value: "business_id", label: "Business ID" },
+// ];
 
 function ScanPay({ isOpen, onClose }) {
   const { initiaAddress, openConnect, requestTxSync } = useInterwovenKit();
@@ -26,6 +26,7 @@ function ScanPay({ isOpen, onClose }) {
   const [proxyType, setProxyType] = useState("phone");
   const [proxyValue, setProxyValue] = useState("+66812345678");
   const [amount, setAmount] = useState("100");
+  const [memo, setMemo] = useState("memo1234");
   const [marketId] = useState(1);
   const [cameraError, setCameraError] = useState(null);
   const [mode, setMode] = useState("scan"); // "scan" | "manual"
@@ -183,6 +184,7 @@ function ScanPay({ isOpen, onClose }) {
           currency,
           amount: parseFloat(amount),
           marketId,
+          memo,
         }),
       });
 
@@ -248,108 +250,149 @@ function ScanPay({ isOpen, onClose }) {
 
       {/* Scan mode: camera only */}
       {mode === 'scan' && (
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        background: '#0d0d0d',
-        aspectRatio: '16/9',
-        marginBottom: '1rem',
-      }}>
-        <video ref={videoRef} autoPlay playsInline muted style={{
-          width: '100%', height: '100%', objectFit: 'cover',
-        }} />
         <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          pointerEvents: 'none',
+          position: 'relative',
+          width: '100%',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          background: '#0d0d0d',
+          aspectRatio: '16/9',
+          marginBottom: '1rem',
         }}>
-          <div style={{
-            width: '50%', aspectRatio: '1',
-            border: '2px solid rgba(0, 229, 196, 0.5)',
-            borderRadius: '12px',
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.35)',
+          <video ref={videoRef} autoPlay playsInline muted style={{
+            width: '100%', height: '100%', objectFit: 'cover',
           }} />
-        </div>
-        {cameraError && (
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'rgba(234, 179, 8, 0.15)',
-            color: '#eab308', fontSize: '0.7rem', textAlign: 'center', padding: '0.4rem',
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
           }}>
-            {cameraError}
+            <div style={{
+              width: '50%', aspectRatio: '1',
+              border: '2px solid rgba(0, 229, 196, 0.5)',
+              borderRadius: '12px',
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.35)',
+            }} />
           </div>
-        )}
-      </div>
+          {cameraError && (
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              background: 'rgba(234, 179, 8, 0.15)',
+              color: '#eab308', fontSize: '0.7rem', textAlign: 'center', padding: '0.4rem',
+            }}>
+              {cameraError}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Manual mode: payment details form */}
       {mode === 'manual' && (
-      <div style={{ marginBottom: '0.75rem' }}>
-        {/* Merchant Details Header */}
-        <div style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-          Merchant Details
-        </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.5rem',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '8px', padding: '0.6rem 0.75rem',
-          marginBottom: '0.5rem',
-          opacity: 0.7,
-        }}>
-          <span style={{ fontSize: '1.1rem' }}>{selectedCountry?.flag || '🇹🇭'}</span>
-          <span style={{ color: '#b8f5e3', fontSize: '0.85rem' }}>{selectedCountry?.system || 'PromptPay'}</span>
-          <span style={{ color: '#7dd3c2', fontSize: '0.75rem', marginLeft: 'auto' }}>{currency}</span>
-        </div>
+        <div style={{ marginBottom: '0.75rem' }}>
+          {/* Merchant Details Header */}
+          <div style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Merchant Details
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '8px', padding: '0.6rem 0.75rem',
+            marginBottom: '0.5rem',
+            opacity: 0.7,
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>{selectedCountry?.flag || '🇹🇭'}</span>
+            <span style={{ color: '#b8f5e3', fontSize: '0.85rem' }}>{selectedCountry?.system || 'PromptPay'}</span>
+            <span style={{ color: '#7dd3c2', fontSize: '0.75rem', marginLeft: 'auto' }}>{currency}</span>
+          </div>
 
-        <div style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-          Payment Info
-        </div>
-        <div style={{
-          background: 'rgba(0, 229, 196, 0.06)',
-          border: '1px solid rgba(0, 229, 196, 0.15)',
-          borderRadius: '12px',
-          padding: '0.75rem',
-        }}>
+          <div style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Payment Info
+          </div>
+          <div style={{
+            background: 'rgba(0, 229, 196, 0.06)',
+            border: '1px solid rgba(0, 229, 196, 0.15)',
+            borderRadius: '12px',
+             marginBottom: '0.5rem',
+            padding: '0.75rem',
+          }}>
 
-        {/* Proxy Value (proxy type hidden, defaults to "phone") */}
-        <div style={{ marginBottom: '0.5rem' }}>
-          <input
-            type="text"
-            value={proxyValue}
-            onChange={(e) => setProxyValue(e.target.value)}
-            style={{
-              width: '100%', padding: '0.5rem',
+            {/* Proxy Value (proxy type hidden, defaults to "phone") */}
+            <div style={{ marginBottom: '0.5rem' }}>
+              <input
+                type="text"
+                value={proxyValue}
+                onChange={(e) => setProxyValue(e.target.value)}
+                style={{
+                  width: '100%', padding: '0.5rem',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(0,229,196,0.15)',
+                  borderRadius: '8px', color: '#ffffff',
+                  fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Amount */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(0,229,196,0.15)',
-              borderRadius: '8px', color: '#ffffff',
-              fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box',
-            }}
-          />
-        </div>
+              borderRadius: '8px', padding: '0.5rem',
+              marginBottom: '0.5rem',
+            }}>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                style={{
+                  flex: 1, background: 'transparent', border: 'none',
+                  color: '#ffffff', fontSize: '1rem', outline: 'none',
+                }}
+              />
+              <span style={{ color: '#00e5c4', fontSize: '0.8rem', fontWeight: 600 }}>{currency}</span>
+            </div>
 
-        {/* Amount */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(0,229,196,0.15)',
-          borderRadius: '8px', padding: '0.5rem',
-        }}>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            style={{
-              flex: 1, background: 'transparent', border: 'none',
-              color: '#ffffff', fontSize: '1rem', outline: 'none',
-            }}
-          />
-          <span style={{ color: '#00e5c4', fontSize: '0.8rem', fontWeight: 600 }}>{currency}</span>
+
+          </div>
+
+          <div style={{ color: '#ffffff', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Memo (Remember this — needed to use it later)
+          </div>
+
+          <div style={{
+            background: 'rgba(0, 229, 196, 0.06)',
+            border: '1px solid rgba(0, 229, 196, 0.15)',
+            borderRadius: '12px',
+            padding: '0.75rem',
+          }}>
+            {/* Memo */}
+            <div>
+              <input
+                type="text"
+                value={memo}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^a-zA-Z0-9]/g, '')
+                  if (v.length <= 8) setMemo(v)
+                }}
+                placeholder="memo (4-8 chars)"
+                maxLength={8}
+                style={{
+                  width: '100%', padding: '0.5rem',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(0,229,196,0.15)',
+                  borderRadius: '8px', color: '#ffffff',
+                  fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <p style={{ color: '#7dd3c2', fontSize: '0.6rem', marginTop: '0.25rem', opacity: 0.7 }}>
+                Alphanumeric only (4-8 chars).
+              </p>
+            </div>
+          </div>
+
+
         </div>
-        </div>
-      </div>
       )}
 
       {error && (
@@ -458,7 +501,7 @@ function ScanPay({ isOpen, onClose }) {
             }}>
               {quote.operator.area}
             </div>
-          )} 
+          )}
         </div>
       </div>
 
@@ -559,7 +602,7 @@ function ScanPay({ isOpen, onClose }) {
       )}
 
       {/* Market Info */}
-      {quote?.market && (
+      {/* {quote?.market && (
         <div style={{
           background: 'rgba(255,255,255,0.03)',
           borderRadius: '10px', padding: '0.6rem',
@@ -577,12 +620,12 @@ function ScanPay({ isOpen, onClose }) {
             <div style={{ color: '#ffffff', fontSize: '0.75rem' }}>{quote.market.lltv}%</div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Actions */}
       <div style={{ marginBottom: '0.5rem' }}>
         <p style={{ color: '#b8f5e3', fontSize: '0.7rem', textAlign: 'center', marginBottom: '0.5rem', lineHeight: 1.4 }}>
-          This will lock <strong style={{ color: '#00e5c4' }}>{quote?.quote?.totalUsdc || '2.87'} USDC</strong> in escrow. 
+          This will lock <strong style={{ color: '#00e5c4' }}>{quote?.quote?.totalUsdc || '2.87'} USDC</strong> in escrow.
           The operator will send {amount} {currency} to {proxyValue} and claim the USDC after settlement.
         </p>
       </div>
@@ -640,20 +683,7 @@ function ScanPay({ isOpen, onClose }) {
       <p style={{ color: '#b8f5e3', fontSize: '0.7rem', marginBottom: '1rem', lineHeight: 1.4 }}>
         Review the receipt on the <strong style={{ color: '#00e5c4' }}>Receipts</strong> page to release funds to the operator once settlement is confirmed.
       </p>
-
-      {/* Receipt Link */}
-      {quote?.confirmData?.receiptUrl && (
-        <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
-          <a
-            href={quote.confirmData.receiptUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#00e5c4', fontSize: '0.75rem', textDecoration: 'underline' }}
-          >
-            View Payment Slip →
-          </a>
-        </div>
-      )}
+ 
 
       {/* Receipt Details */}
       {quote?.confirmData && (
@@ -661,10 +691,7 @@ function ScanPay({ isOpen, onClose }) {
           background: 'rgba(255,255,255,0.03)',
           borderRadius: '12px', padding: '1rem',
           marginBottom: '1rem', textAlign: 'left',
-        }}>
-          <div style={{ color: '#7dd3c2', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-            Receipt
-          </div>
+        }}> 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
             <span style={{ color: '#7dd3c2', fontSize: '0.75rem' }}>Request ID</span>
             <span style={{ color: '#ffffff', fontSize: '0.75rem', fontFamily: 'monospace' }}>
@@ -681,6 +708,18 @@ function ScanPay({ isOpen, onClose }) {
             <span style={{ color: '#7dd3c2', fontSize: '0.75rem' }}>Escrow Status</span>
             <span style={{ color: '#eab308', fontSize: '0.75rem' }}>Locked (HTLC)</span>
           </div>
+          {quote.confirmData.memoHash && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+              <span style={{ color: '#7dd3c2', fontSize: '0.75rem' }}>Memo Hash</span>
+              <span style={{ color: '#ffffff', fontSize: '0.65rem', fontFamily: 'monospace', wordBreak: 'break-all', textAlign: 'right', maxWidth: '60%' }}>
+                {quote.confirmData.memoHash.slice(0, 16)}...
+              </span>
+            </div>
+          )}
+          {/* <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#7dd3c2', fontSize: '0.75rem' }}>Memo</span>
+            <span style={{ color: '#ffffff', fontSize: '0.75rem', fontFamily: 'monospace' }}>{memo}</span>
+          </div> */}
         </div>
       )}
 

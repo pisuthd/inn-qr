@@ -128,6 +128,8 @@ function Home({ onNavigate, onOpenModal }) {
       onOpenModal('repay');
     } else if (id === 'receipts') {
       onOpenModal('receipts');
+    } else if (id === 'faq') {
+      onOpenModal('faq');
     } else {
       onNavigate(id);
     }
@@ -138,8 +140,8 @@ function Home({ onNavigate, onOpenModal }) {
     { id: 'receipts', label: 'Receipts', Icon: FileText, gradient: 'gradient-supply' },
     { id: 'deposit', label: 'Deposit', Icon: ArrowDownToLine, gradient: 'gradient-inventory' },
     { id: 'repay', label: 'Repay', Icon: Undo2, gradient: 'gradient-leaderboard' },
-    { id: 'earn', label: 'Earn', Icon: PiggyBank, gradient: 'gradient-borrow' },
     { id: 'borrow', label: 'Borrow', Icon: NotebookPen, gradient: 'gradient-agents' },
+    { id: 'earn', label: 'Stake', Icon: PiggyBank, gradient: 'gradient-borrow' }, 
     { id: 'faq', label: 'FAQ', Icon: HelpCircle, gradient: 'gradient-settings' },
     { id: 'support', label: 'Support', Icon: Headphones, gradient: 'gradient-send' },
   ];
@@ -184,43 +186,7 @@ function Home({ onNavigate, onOpenModal }) {
         </div>
       </div> 
 
-      {/* Auto-Sign Toggle */}
-      {initiaAddress && (
-        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h3 className="card-title" style={{ marginBottom: '0.25rem' }}>Auto-Sign</h3>
-            <p style={{ color: '#7dd3c2', fontSize: '0.75rem', margin: 0 }}>
-              {isAutoSignEnabled ? 'Operator can borrow on your behalf' : 'Enable to let operator settle payments'}
-            </p>
-          </div>
-          <button
-            onClick={toggleAutoSign}
-            style={{
-              width: '48px',
-              height: '28px',
-              borderRadius: '14px',
-              border: 'none',
-              background: isAutoSignEnabled ? '#00e5c4' : 'rgba(255,255,255,0.15)',
-              cursor: 'pointer',
-              position: 'relative',
-              transition: 'background 0.2s',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{
-              width: '22px',
-              height: '22px',
-              borderRadius: '50%',
-              background: '#ffffff',
-              position: 'absolute',
-              top: '3px',
-              left: isAutoSignEnabled ? '23px' : '3px',
-              transition: 'left 0.2s',
-            }} />
-          </button>
-        </div>
-      )}
-
+    
       {/* Menu Grid */}
       <div className="menu-grid">
         {menuItems.map((item) => (
@@ -241,6 +207,8 @@ function Home({ onNavigate, onOpenModal }) {
           </button>
         ))}
       </div>
+
+      
 
       {/* Feature Highlights */}
       <div className="card">
@@ -285,6 +253,44 @@ function Home({ onNavigate, onOpenModal }) {
           </li>
         </ul>
       </div>
+
+        {/* Auto-Sign Toggle */}
+      {initiaAddress && (
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 className="card-title" style={{ marginBottom: '0.25rem' }}>Auto-Sign</h3>
+            <p style={{ color: '#7dd3c2', fontSize: '0.75rem', margin: 0 }}>
+              {isAutoSignEnabled ? 'Approve transactions without wallet popup' : 'Enable seamless one-click payments'}
+            </p>
+          </div>
+          <button
+            onClick={toggleAutoSign}
+            style={{
+              width: '48px',
+              height: '28px',
+              borderRadius: '14px',
+              border: 'none',
+              background: isAutoSignEnabled ? '#00e5c4' : 'rgba(255,255,255,0.15)',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'background 0.2s',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              background: '#ffffff',
+              position: 'absolute',
+              top: '3px',
+              left: isAutoSignEnabled ? '23px' : '3px',
+              transition: 'left 0.2s',
+            }} />
+          </button>
+        </div>
+      )}
+
 
       {/* CTA */}
       <div className="card" style={{ textAlign: 'center' }}>

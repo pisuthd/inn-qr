@@ -1,4 +1,4 @@
-{/* Receipts Modal — Lists all user's escrow receipts from on-chain data */}
+{/* Receipts Modal — Lists all user's escrow receipts from on-chain data */ }
 import { useState, useEffect, useMemo } from "react";
 import { useInterwovenKit } from "@initia/interwovenkit-react";
 import {
@@ -8,14 +8,14 @@ import Modal from "../components/Modal.jsx";
 import { API_URL } from "../config.js";
 
 const STATUS_CONFIG = {
-  locked:  { color: '#eab308', bg: 'rgba(234,179,8,0.12)',  border: 'rgba(234,179,8,0.25)',  label: 'Pending',  icon: Clock },
-  claimed: { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',   border: 'rgba(34,197,94,0.25)',   label: 'Settled',  icon: CheckCircle },
-  refunded:{ color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)',   label: 'Refunded', icon: AlertTriangle },
+  locked: { color: '#eab308', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.25)', label: 'Pending', icon: Clock },
+  claimed: { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.25)', label: 'Settled', icon: CheckCircle },
+  refunded: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)', label: 'Refunded', icon: AlertTriangle },
 };
 
 const TABS = [
-  { key: 'locked',   label: 'Pending',  icon: Clock,       color: '#eab308' },
-  { key: 'claimed',  label: 'Settled',  icon: CheckCircle,  color: '#22c55e' },
+  { key: 'locked', label: 'Pending', icon: Clock, color: '#eab308' },
+  { key: 'claimed', label: 'Settled', icon: CheckCircle, color: '#22c55e' },
   { key: 'refunded', label: 'Refunded', icon: AlertTriangle, color: '#ef4444' },
 ];
 
@@ -26,6 +26,7 @@ function Receipts({ isOpen, onClose }) {
   const [error, setError] = useState(null);
   const [approving, setApproving] = useState(null);
   const [approveResult, setApproveResult] = useState(null);
+  const [memoInputs, setMemoInputs] = useState({}); // { requestId: "memo123" }
   const [activeTab, setActiveTab] = useState('locked');
 
   const loadReceipts = async () => {
@@ -67,13 +68,18 @@ function Receipts({ isOpen, onClose }) {
   }, [receipts]);
 
   const handleApprove = async (requestId) => {
+    const memo = memoInputs[requestId] || '';
+    if (memo.length < 4) {
+      setError('Memo must be 4-8 alphanumeric characters');
+      return;
+    }
     setApproving(requestId);
     setError(null);
     try {
       const res = await fetch(`${API_URL}/api/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, marketId: 1 }),
+        body: JSON.stringify({ requestId, memo }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -114,6 +120,8 @@ function Receipts({ isOpen, onClose }) {
     const cfg = STATUS_CONFIG[receipt.status] || STATUS_CONFIG.locked;
     const StatusIcon = cfg.icon;
     const isLocked = receipt.status === 'locked';
+    const memo = memoInputs[receipt.requestId] || '';
+    const memoValid = memo.length >= 4 && memo.length <= 8 && /^[a-zA-Z0-9]+$/.test(memo);
 
     return (
       <div key={receipt.requestId} style={{
@@ -144,45 +152,76 @@ function Receipts({ isOpen, onClose }) {
           </span>
         </div>
 
-        {/* Actions row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
-          <a
-            href={receipt.receiptUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: '#00e5c4', fontSize: '0.65rem', textDecoration: 'underline',
-              display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-            }}
-          >
-            Slip <ExternalLink size={9} />
-          </a>
+        <div className="flex flex-row ">
 
-          {isLocked && (
-            <button
-              onClick={() => handleApprove(receipt.requestId)}
-              disabled={approving === receipt.requestId}
+          <div style={{ display: 'flex', flex: 1, justifyContent: 'space-between', alignItems: 'center', marginTop: '0.35rem' }}>
+            <a
+              href={receipt.receiptUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
-                background: approving === receipt.requestId ? 'rgba(0,229,196,0.2)' : '#00e5c4',
-                color: approving === receipt.requestId ? '#7dd3c2' : '#1a1a2e',
-                border: 'none', borderRadius: '6px',
-                padding: '0.25rem 0.6rem', fontSize: '0.65rem', fontWeight: 600,
-                cursor: approving === receipt.requestId ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', gap: '0.25rem',
+                color: '#00e5c4', fontSize: '0.65rem', textDecoration: 'underline',
+                display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
               }}
             >
-              {approving === receipt.requestId ? (
-                <><RefreshCw size={10} style={{ animation: 'spin 1s linear infinite' }} /></>
-              ) : (
-                <>Approve</>
-              )}
-            </button>
+              Slip <ExternalLink size={9} />
+            </a>
+
+            {approveResult?.requestId === receipt.requestId && receipt.status === 'claimed' && (
+              <span style={{ color: '#22c55e', fontSize: '0.6rem' }}>✅ Done</span>
+            )}
+          </div>
+
+          {/* Memo input + Approve (only for locked) */}
+          {isLocked && (
+            <div style={{
+              display: 'flex', gap: '0.4rem', alignItems: 'center',
+              marginTop: '0.5rem'
+            }}>
+              <input
+                type="text"
+                value={memo}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                  if (v.length <= 8) {
+                    setMemoInputs(prev => ({ ...prev, [receipt.requestId]: v }));
+                  }
+                }}
+                placeholder="Enter memo (4-8 chars)"
+                maxLength={8}
+                style={{
+                  flex: 1, padding: '0.35rem 0.5rem',
+                  height: "26px",
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(0,229,196,0.2)',
+                  borderRadius: '6px', color: '#ffffff',
+                  fontSize: '0.7rem', outline: 'none',
+                }}
+              />
+              <button
+                onClick={() => handleApprove(receipt.requestId)}
+                disabled={approving === receipt.requestId || !memoValid}
+                style={{
+                  background: memoValid ? '#00e5c4' : 'rgba(0,229,196,0.2)',
+                  color: memoValid ? '#1a1a2e' : '#7dd3c2',
+                  border: 'none', borderRadius: '6px',
+                  padding: '0.35rem 0.6rem', fontSize: '0.65rem', fontWeight: 600,
+                  cursor: memoValid && approving !== receipt.requestId ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: '0.25rem',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {approving === receipt.requestId ? (
+                  <><RefreshCw size={10} style={{ animation: 'spin 1s linear infinite' }} /></>
+                ) : (
+                  <>Approve</>
+                )}
+              </button>
+            </div>
           )}
 
-          {approveResult?.requestId === receipt.requestId && receipt.status === 'claimed' && (
-            <span style={{ color: '#22c55e', fontSize: '0.6rem' }}>✅ Done</span>
-          )}
         </div>
+
       </div>
     );
   };

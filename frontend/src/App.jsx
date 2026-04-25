@@ -12,6 +12,7 @@ import Borrow from "./pages/Borrow.jsx";
 import Repay from "./pages/Repay.jsx";
 import ScanPay from "./pages/ScanPay.jsx"; 
 import Receipts from "./pages/Receipts.jsx";
+import Faq from "./pages/Faq.jsx";
 
 function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -54,6 +55,7 @@ function App() {
       {activeModal === 'repay' && <Repay isOpen={true} onClose={() => setActiveModal(null)} />}
       {activeModal === 'pay' && <ScanPay isOpen={true} onClose={() => setActiveModal(null)} />}
       {activeModal === 'receipts' && <Receipts isOpen={true} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'faq' && <Faq isOpen={true} onClose={() => setActiveModal(null)} />}
     </SettingsProvider>
   );
 }
