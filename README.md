@@ -1,26 +1,5 @@
 # WeaveLink
 
-Spend yield from staked assets across Initia Interwoven via QR in local currency, with HTLC-secured, trustless settlement built on isolated lending markets.
-
----
-
-| Field | Value |
-|-------|-------|
-| **Project Name** | WeaveLink |
-| **Hackathon** | INITIATE Season 1 |
-| **Chain ID** | weavelink-1 |
-| **VM** | MoveVM (Minitia L2) |
-| **L1 Network** | Initia initiation-2 |
-| **Module Address** | init14wyc4mrufq05j8ryx0m0249hjesyuzak9rq86s |
-| **Native Feature** | Auto-Signing + IBC Bridge via @initia/interwovenkit-react |
-| **Contract Modules** | market_v1.move / oracle.move / operator.move / mock_tokens.move |
-| **Backend** | Node.js + Express (operator API) |
-| **Frontend** | React + Vite |
-| **Fee Denom** | WLINK |
-| **Explorer** | scan.initia.xyz |
-
----
-
 ## What WeaveLink Is
 
 Across Initia Interwoven, crypto holders earn yield from staking, lending, and LP positions -- sINIT at ~12%, Cabal iUSD at ~17%, various LP positions yielding 20%+ -- but that yield sits locked in positions across dozens of appchains. To spend it, you'd have to sell. Selling triggers taxable events, breaks compounding, and disrupts your strategy.
@@ -36,8 +15,81 @@ Sell crypto -> taxable event  ->     Borrow against collateral (no sale)
 Use centralized exchange     ->      HTLC escrow (non-custodial)
 Wait for bank transfer       ->      Settled via national QR rails
 Trust the exchange           ->      Cryptographic proof (SHA3-256)
-One currency                 ->      5 currencies, 5 countries
 ```
+
+---
+
+## Live Endpoints
+
+Our appchain is deployed on AWS EC2 with a reverse proxy, distributed via CloudFront with HTTPS. Anyone can interact with the live dapp and chain directly -- no local setup or custom client required.
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Frontend URL | `https://d3pgy5i52ev547.cloudfront.net` | Live dapp connected to weavelink-1 chain |
+| Rollup RPC | `https://d3pgy5i52ev547.cloudfront.net/rpc` | Transaction broadcast, block queries |
+| Rollup REST | `https://d3pgy5i52ev547.cloudfront.net/rest` | REST API, contract view functions |
+| Operator API | `https://weavelink-one.vercel.app/api` | Match, confirm, approve endpoints |
+| Faucet Script | `scripts/faucet.js` | For mint gas tokens |
+
+---
+
+## Initia Hackathon Submission
+
+- **Project Name**: WeaveLink
+
+### Project Overview
+
+Spend yield from staked assets across Initia Interwoven via QR in local currency, with HTLC-secured, trustless settlement built on isolated lending markets. Designed for crypto holders who earn yield across multiple appchains but need to spend without selling.
+
+### Implementation Detail
+
+- **The Custom Implementation**: Isolated lending markets with HTLC escrow for trustless, operator-mediated USDC withdrawals. Inspired by [Morpho Blue](https://github.com/morpho-org/morpho-blue)'s design.
+  - Isolated markets: one loan token (USDC) with one collateral token to minimize risk, plus supply, borrow, collateral, repay, liquidation, and per-second interest accrual
+  - Delegation-based authorization system allowing operators to borrow on behalf of users
+  - HTLC escrow module that locks USDC for operator-mediated off-ramp fiat payments, with SHA3-256 for cryptographic settlement proof, timeout safety, and on-chain audit trail
+
+- **The Native Features**:
+  - **Auto-signing**: Users grant a single scoped session before initiating payments. All subsequent on-chain actions -- authorizing the operator, confirming escrow -- execute as background transactions with zero wallet interruption. The payment experience is indistinguishable from a traditional mobile banking app.
+  - **IBC Interwoven Bridge**: The Wallet page uses InterwovenKit's `openBridge()` to enable asset transfers from Initia L1 (initiation-2) and Cabal directly to weavelink-1, without leaving the app or opening external bridge interfaces.
+
+- **Stateless Operator Backend**: A Node.js Express server acting as the operator. No database. All state lives on-chain. The backend holds operator keys, constructs and broadcasts transactions via `@initia/initia.js`, and handles FX conversion across Southeast Asian payment rails.
+
+### How to Run
+
+**1. Access the dapp**
+Open https://d3pgy5i52ev547.cloudfront.net in your browser. Connect using any Web3 wallet (Metamask, Rabby, etc.) -- InterwovenKit handles chain integration seamlessly.
+
+**2. Get gas tokens**
+Clone the repo, then run:
+```bash
+cd scripts
+npm install
+node faucet.js YOUR_ADDRESS
+```
+This mints gas tokens to your address so you can pay for on-chain transactions.
+
+**3. Get mock tokens**
+Navigate to the Wallet page and mint mock interest-bearing tokens (sINIT, LP, iUSD). These simulate yield from staking and LP positions across Initia Interwoven.
+
+**4. Deposit collateral**
+Track your APY earnings on interest-bearing tokens. When ready, click the Deposit icon on the main menu to supply collateral to isolated lending markets. Note: Collateral tokens do not accrue interest -- only the loan token (USDC) positions earn yield.
+
+**5. Borrow USDC**
+After depositing collateral, you gain borrowing power and the USDC will be used for off-ramping into local currency.
+
+**6. Scan or enter payment**
+Click the Scan icon to scan a merchant QR code (for now we need to use the manual entry form with Thailand's PromptPay system). Click Next -- the system matches you with a local operator.
+
+**7. Approve operator**
+Once matched, the operator provides a quote in USDC with FX fees. If this is your first transaction, you'll need to approve the operator to borrow on your behalf and move funds from your lending position into the HTLC escrow.
+
+**8. Provide memo and confirm**
+Enter a memo. This memo is hashed on the client side, and the operator uses this hash to lock USDC into the HTLC escrow. Funds remain locked until you review and approve the settlement.
+
+**9. Verify and unlock**
+The operator settles the fiat payment off-chain (e.g., bank transfer to merchant). You review the payment slip and reveal the full memo. This cryptographic proof unlocks the escrow, transferring USDC to the operator. If the operator fails to settle within the timeout (typically ~30 minutes), you can manually trigger a refund to reclaim your USDC.
+
+When a user makes a payment, they're not actually spending their collateral -- instead, they borrow USDC from their own lending position. This borrowed USDC is locked in the HTLC escrow and released to the operator after off-chain settlement. The user then repays the borrowed USDC plus interest. This interest accrues to liquidity providers (LPs) who supply USDC to the markets, and incentivizes operators to act as LPs themselves to facilitate the off-chain settlement flow.
 
 ---
 
@@ -430,17 +482,7 @@ This mints USDC, sINIT, LP, iUSD, and Delta Neutral INIT tokens to your address.
 
 ---
 
-## Live Endpoints
 
-| Service | URL | Purpose |
-|---------|-----|---------|
-| Rollup RPC | `https://d3pgy5i52ev547.cloudfront.net/rpc` | Transaction broadcast, block queries |
-| Rollup REST | `https://d3pgy5i52ev547.cloudfront.net/rest` | REST API, contract view functions |
-| Operator API | `https://weavelink-one.vercel.app/api` | Match, confirm, approve endpoints |
-| Block Explorer | `https://scan.initia.xyz` | Transaction inspection, contract state |
-| Faucet Script | `scripts/faucet.js` | Mint test tokens locally |
-
----
 
 ## Backend API Reference
 
@@ -591,28 +633,6 @@ health_factor = (collateral * collateral_price * lltv / 100) * 100 / (borrowed *
 |------|------|-------------|
 | Fiat | 0 | Bank transfer / QR payment |
 | Cross-chain | 1 | Bridge transfer |
-
----
-
-## Hackathon Submission Detail
-
-### What Was Built
-
-**The Custom Implementation:** A complete Move smart contract suite encoding isolated lending markets with operator-mediated HTLC escrow withdrawals. The contracts include:
-
-- Full lending market with supply, borrow, collateral, repay, liquidation, and per-second interest accrual
-- Delegation-based authorization system allowing operators to borrow on behalf of users
-- HTLC escrow module with SHA3-256 double-hash secret management, timeout safety, and on-chain audit trail
-- Admin-managed price oracle with 1e6 precision
-- 98 comprehensive Move tests covering all edge cases
-
-**The Native Feature:** WeaveLink implements auto-signing via `@initia/interwovenkit-react`. Users grant a single scoped session before initiating payments. All subsequent on-chain actions -- authorizing the operator, confirming escrow -- execute as background transactions with zero wallet interruption. The payment experience is indistinguishable from a traditional mobile banking app.
-
-**IBC Bridge Integration:** The Wallet page uses InterwovenKit's `openBridge()` to enable asset transfers from Initia L1 (initiation-2) and Cabal directly to weavelink-1, without leaving the app or opening external bridge interfaces.
-
-**Stateless Operator Backend:** A Node.js Express server acting as the operator. No database. All state lives on-chain. The backend holds operator keys, constructs and broadcasts transactions via `@initia/initia.js`, and handles FX conversion across 5 Southeast Asian payment rails.
-
----
 
 ## License
 
