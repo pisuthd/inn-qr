@@ -1,0 +1,12 @@
+{
+    "project_name": "WeaveLink",
+    "repo_url": "https://github.com/pisuthd/weavelink",
+    "commit_sha": "a0eeb92122868ac352aad10efbff6cc3c4f7199d",
+    "rollup_chain_id": "weavelink-1",
+    "deployed_address": "0xAB898AEC7C481F491C6433F6F554B796604E0BB6",
+    "vm": "move",
+    "native_feature": "interwoven-bridge",
+    "core_logic_path": "contracts/sources/operator.move",
+    "native_feature_frontend_path": "frontend/src/pages/Wallet.jsx",
+    "demo_video_url": "https://youtu.be/BCQ8l5x5AE4"
+}
